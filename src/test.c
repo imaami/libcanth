@@ -12,10 +12,10 @@ diag_apple_clang(ignored "-Wpadded")
 
 diag_apple_clang(pop)
 
-#include "compiler.h"
 #include "dbg.h"
 #include "dstr.h"
 #include "file.h"
+#include "version.h"
 
 #if clang_older_than_version(19) \
  && clang_newer_than_version(11)

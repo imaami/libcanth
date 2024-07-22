@@ -3,7 +3,7 @@
  *
  * @author Juuso Alasuutari
  */
-#include "compiler.h"
+#include "version.h"
 
 const_nonnull char const *
 canth_c_version (void)

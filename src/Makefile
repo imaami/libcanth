@@ -1,6 +1,6 @@
 override THIS_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
-override TARGETS := test
+override TARGETS := test json-wip
 
     all:| $(TARGETS)
   clean:| $(TARGETS:%=clean-%)
@@ -22,6 +22,9 @@ override SRC_test := cc.c cxx.cpp dstr.c file.c test.c
 override DBG_test := dbg.c
 override LIBS_test = $(CJSON_LIBS)
 override CFLAGS_test = $(CJSON_CFLAGS)
+
+override SRC_json-wip := json.c
+override DBG_json-wip := dbg.c
 
 $(call pkg_libs,libcjson,CJSON_LIBS,-lcjson)
 $(call pkg_cflags,libcjson,CJSON_CFLAGS)

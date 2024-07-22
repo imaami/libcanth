@@ -3,7 +3,7 @@
  *
  * @author Juuso Alasuutari
  */
-#include "compiler.h"
+#include "version.h"
 
 extern "C"
 const_nonnull char const *

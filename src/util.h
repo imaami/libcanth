@@ -6,6 +6,8 @@
 #ifndef LIBCANTH_SRC_UTIL_H_
 #define LIBCANTH_SRC_UTIL_H_
 
+#include "compiler.h"
+
 /** @brief Instruct the compiler to always inline a function.
  */
 #define force_inline __attribute__((always_inline)) inline
@@ -25,13 +27,11 @@
 
 #ifndef __cplusplus
 
-#ifdef __clang_major__
-# if __clang_major__ < 19
-#  define constexpr __attribute__((const))
-# endif
-#elif __GNUC__ < 13
+#if clang_older_than_version(19) \
+ || gcc_older_than_version(13)   \
+ || defined(__INTELLISENSE__)
 # define constexpr __attribute__((const))
-#endif
+#endif /* clang < 19 || gcc < 13 || __INTELLISENSE__ */
 
 /** @brief Check if a value is a char array.
  */

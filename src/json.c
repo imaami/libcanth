@@ -1,9 +1,23 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/** @file json.c
+ *
+ * @author Juuso Alasuutari
+ */
+#include <errno.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
+#include "dbg.h"
 #include "util.h"
 
-enum json_type : uint8_t {
+#ifdef __INTELLISENSE__
+# define C23(...)
+#else
+# define C23(...) __VA_ARGS__
+#endif
+
+enum json_type C23(: uint8_t) {
 	json_false,
 	json_true,
 	json_null,
@@ -13,7 +27,7 @@ enum json_type : uint8_t {
 	json_object
 };
 
-enum json_byte : uint8_t {
+enum json_byte C23(: uint8_t) {
 	json_1_9 = 1U,
 	json_dig = json_1_9 << 1U,
 	json_esc = json_dig << 1U,
@@ -23,7 +37,10 @@ enum json_byte : uint8_t {
 	json_ws  = json_sig << 1U,
 };
 
-struct json_w;
+struct json_w {
+	unsigned char const *buf;
+	size_t               len;
+};
 
 struct json_arg {
 	uint8_t const *ptr;
@@ -37,12 +54,8 @@ struct json_ret {
 	uint64_t code :  8;
 };
 
-struct json_w {
-	uint8_t const *buf;
-	size_t         len;
-};
-
-static void json_parse (char const *str);
+static void
+json_parse (char const *str);
 
 int
 main (int    c,
@@ -51,27 +64,6 @@ main (int    c,
 	for (int i = 0; ++i < c;) {
 		json_parse(v[i]);
 	}
-}
-
-static uint8_t const *
-skip_ws (uint8_t const       *p,
-         uint8_t const *const e);
-
-static struct json_ret
-parse_value (struct json_arg w);
-
-static void
-json_parse (char const *str)
-{
-	if (!str)
-		return;
-
-	struct json_w w = {
-		.buf = (void const *)str,
-		.end = strlen(str),
-	};
-
-	ptr = parse_value(ptr, end);
 }
 
 constexpr static const uint8_t lut[256] = {
@@ -121,150 +113,244 @@ constexpr static const uint8_t lut[256] = {
 };
 
 static force_inline uint8_t const *
-skip_ws (uint8_t const       *p,
-         uint8_t const *const e)
+skip_ws (struct json_arg arg)
 {
-	for (; p < e && (lut[*p] & json_ws); ++p);
-	return p;
+	for (; arg.ptr < arg.end && (lut[*arg.ptr] & json_ws); ++arg.ptr);
+	return arg.ptr;
 }
 
-static uint8_t const *
-parse_integer (uint8_t const       *p,
-               uint8_t const *const e)
+static struct json_ret
+parse_integer (struct json_arg arg)
 {
-	return p;
+	return (struct json_ret){0};
 }
 
-static uint8_t const *
-parse_number (uint8_t const       *p,
-              uint8_t const *const e)
+static struct json_ret
+parse_number (struct json_arg arg)
 {
-	return p;
+	return (struct json_ret){0};
 }
 
-static uint8_t const *
-parse_array (uint8_t const       *p,
-             uint8_t const *const e)
+static struct json_ret
+parse_array (struct json_arg arg)
 {
-	return p;
+	return (struct json_ret){0};
 }
 
-static uint8_t const *
-parse_object (uint8_t const       *p,
-              uint8_t const *const e)
+static struct json_ret
+parse_object (struct json_arg arg)
 {
-	return p;
+	return (struct json_ret){0};
 }
 
-static uint8_t const *
-parse_string (uint8_t const       *p,
-              uint8_t const *const e)
+static struct json_ret
+parse_string (struct json_arg arg)
 {
-	return p;
-}
-
-static force_inline uint8_t const *
-parse_dash (uint8_t const       *p,
-            uint8_t const *const e)
-{
-	return p;
-}
-
-static force_inline uint8_t const *
-parse_false (uint8_t const       *p,
-             uint8_t const *const e)
-{
-	if ((ptrdiff_t)(e - p) < 5) {
-		if (++p < e && *p == 'a' &&
-		    ++p < e && *p == 'l' &&
-		    ++p < e && *p == 's' &&
-		    ++p < e && *p == 'e') {
-			++p;
-		}
-	} else if (*++p == 'a' &&
-	           *++p == 'l' &&
-	           *++p == 's' &&
-	           *++p == 'e') {
-		++p;
-	}
-	return p;
-}
-
-static force_inline uint8_t const *
-parse_null (uint8_t const       *p,
-            uint8_t const *const e)
-{
-	if ((ptrdiff_t)(e - p) < 4) {
-		if (++p < e && *p == 'u' &&
-		    ++p < e && *p == 'l' &&
-		    ++p < e && *p == 'l') {
-			++p;
-		}
-	} else if (*++p == 'u' &&
-	           *++p == 'l' &&
-	           *++p == 'l') {
-		++p;
-	}
-	return p;
+	return (struct json_ret){0};
 }
 
 static force_inline struct json_ret
-parse_true (uint8_t const       *p,
-            uint8_t const *const e)
+parse_digits (struct json_arg arg)
 {
-	bool done = (ptrdiff_t)(e - p) > 3;
-	int error;
-
-	if (!done) {
-		error = ++p < e && (*p != 'r' ||
-		      ( ++p < e && (*p != 'u' ||
-		      ( ++p < e && (*p != 'e'))));
-	} else {
-		error = *++p != 'r' ||
-		        *++p != 'u' ||
-		        *++p != 'e';
-		++p;
-	}
-	return p;
+	return (struct json_ret){0};
 }
 
-static uint8_t const *
-parse_value (uint8_t const       *p,
-             uint8_t const *const e)
+static force_inline struct json_ret
+parse_neg_int (struct json_arg arg)
 {
-	uint8_t const *q = p;
+	struct json_ret ret = {
+		.size = 1,
+		.type = json_number,
+		.code = 0
+	};
 
-	switch (*p++) {
+	if (++arg.ptr >= arg.end) {
+		ret.code = ENODATA;
+		return ret;
+	}
+
+	uint8_t flags = lut[*arg.ptr];
+
+	if (!(flags & json_dig)) {
+		ret.code = EINVAL;
+		return ret;
+	}
+
+	if (flags & json_1_9)
+		ret = parse_integer(arg);
+
+	ret.size++;
+	return ret;
+}
+
+static force_inline struct json_ret
+parse_false (struct json_arg arg)
+{
+	uint8_t const *p = arg.ptr;
+	struct json_ret ret = {
+		.size = 0,
+		.type = json_false,
+		.code = 0
+	};
+
+	do {
+		if ((ptrdiff_t)(arg.end - arg.ptr) < 5) {
+			if (!(++p < arg.end && (*p != 'a' ||
+			     (++p < arg.end && (*p != 'l' ||
+			     (++p < arg.end && (*p != 's' ||
+			      ++p < arg.end))))))) {
+				ret.code = ENODATA;
+				break;
+			}
+
+		} else if (*++p == 'a' &&
+		           *++p == 'l' &&
+		           *++p == 's' &&
+		           *++p == 'e') {
+			++p;
+			break;
+		}
+
+		ret.code = *p ? EINVAL : ENODATA;
+	} while (0);
+
+	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
+	return ret;
+}
+
+static force_inline struct json_ret
+parse_null (struct json_arg arg)
+{
+	uint8_t const *p = arg.ptr;
+	struct json_ret ret = {
+		.size = 0,
+		.type = json_null,
+		.code = 0
+	};
+
+	do {
+		if ((ptrdiff_t)(arg.end - arg.ptr) < 4) {
+			if (!(++p < arg.end && (*p != 'u' ||
+			     (++p < arg.end && (*p != 'l' ||
+			      ++p < arg.end))))) {
+				ret.code = ENODATA;
+				break;
+			}
+
+		} else if (*++p == 'u' &&
+		           *++p == 'l' &&
+		           *++p == 'l') {
+			++p;
+			break;
+		}
+
+		ret.code = *p ? EINVAL : ENODATA;
+	} while (0);
+
+	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
+	return ret;
+}
+
+static struct json_ret
+parse_true (struct json_arg arg)
+{
+	uint8_t const *p = arg.ptr;
+	struct json_ret ret = {
+		.size = 0,
+		.type = json_true,
+		.code = 0
+	};
+
+	do {
+		if ((ptrdiff_t)(arg.end - arg.ptr) < 4) {
+			if (!(++p < arg.end && (*p != 'r' ||
+			     (++p < arg.end && (*p != 'u' ||
+			      ++p < arg.end))))) {
+				ret.code = ENODATA;
+				break;
+			}
+
+		} else if (*++p == 'r' &&
+		           *++p == 'u' &&
+		           *++p == 'e') {
+			++p;
+			break;
+		}
+
+		ret.code = *p ? EINVAL : ENODATA;
+	} while (0);
+
+	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
+	return ret;
+}
+
+static struct json_ret
+parse_value (struct json_arg arg)
+{
+	struct json_ret ret = {0};
+
+	switch (*arg.ptr) {
 	case '"':
-		p = parse_string(p, e);
+		ret = parse_string(arg);
 		break;
 	case '-':
-		p = parse_dash(p, e);
+		ret = parse_neg_int(arg);
 		break;
 	case '0':
-		p++;
+		ret.size = 1;
+		ret.type = json_number;
 		break;
 	case '1': case '2': case '3':
 	case '4': case '5': case '6':
 	case '7': case '8': case '9':
-		q = parse_number(p, e);
+		ret = parse_integer(arg);
 		break;
 	case '[':
-		q = parse_array(p, e);
+		ret = parse_array(arg);
 		break;
 	case 'f':
-		q = parse_false(p, e);
+		ret = parse_false(arg);
 		break;
 	case 'n':
-		q = parse_null(p, e);
+		ret = parse_null(arg);
 		break;
 	case 't':
-		q = parse_true(p, e);
+		ret = parse_true(arg);
 		break;
 	case '{':
-		q = parse_object(p, e);
+		ret = parse_object(arg);
 		break;
 	}
 
-	return p;
+	return ret;
+}
+
+static struct json_ret
+parse_element (struct json_arg arg)
+{
+		arg.ptr = skip_ws(arg);
+		struct json_ret ret = parse_value(arg);
+		arg.ptr = skip_ws(arg);
+}
+
+static void
+json_parse (char const *str)
+{
+	if (!str)
+		return;
+
+	struct json_w w = {
+		.buf = (void const *)str,
+		.len = strlen(str),
+	};
+
+	struct json_ret ret = parse_value((struct json_arg){
+		.ptr = (uint8_t const *)w.buf,
+		.end = &w.buf[w.len],
+		.ctx = &w,
+	});
+
+	if (ret.code) {
+		pr_errno(ret.code, "json_parse");
+	}
 }
