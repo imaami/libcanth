@@ -21,7 +21,7 @@ include $(THIS_DIR)../common.mk
 override SRC_test := cc.c cxx.cpp dstr.c file.c test.c
 override DBG_test := dbg.c
 override LIBS_test = $(CJSON_LIBS)
-override CFLAGS_test = $(CJSON_CFLAGS)
+override CFLAGS_test.c = $(CJSON_CFLAGS)
 
 $(call pkg_libs,libcjson,CJSON_LIBS,-lcjson)
 $(call pkg_cflags,libcjson,CJSON_CFLAGS)
