@@ -10,6 +10,11 @@
  */
 #define force_inline __attribute__((always_inline)) inline
 
+/** @brief Instruct the compiler to always inline a function
+ *         and hint that its return value is invariant.
+ */
+#define const_inline __attribute__((always_inline,const)) inline
+
 /** @brief Function returns a specific baked-in data pointer.
  */
 #define const_nonnull __attribute__((const,returns_nonnull))
