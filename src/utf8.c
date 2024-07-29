@@ -89,46 +89,57 @@ const uint8_t utf8_range[][4] = {UTF8_PARSER_DESCRIPTOR(make_range)};
 #undef make_range
 #endif
 
+#define two(x)          x,x
+#define three(x)        x,x,x
+#define eight(x)        x,x,x,x,x,x,x,x
+#define twelve(x)       eight(x),x,x,x,x
+#define sixteen(x)      eight(x),eight(x)
+#define thirty(x)       sixteen(x),twelve(x),x,x
+#define thirty2(x)      sixteen(x),sixteen(x)
+#define onehundred27(x) thirty2(x),thirty2(x),thirty2(x),thirty(x),x
+
 constexpr static const uint16_t utf8_lut[256] = {
-	0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	/* 0x00 */
+	0,
 
-	0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00,
-	0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00, 0x5b00,
+	/* 0x01-0x7f */
+	onehundred27(utf8_asc_flag),
 
-	0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00,
-	0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00, 0x5e00,
-
-	0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600,
-	0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600,
-	0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600,
-	0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600, 0x7600,
+	sixteen(utf8_cb1_flag|utf8_cb2_flag|utf8_cb3_flag|utf8_cb2_ed_flag|utf8_cb3_f4_flag),
+	sixteen(utf8_cb1_flag|utf8_cb2_flag|utf8_cb3_flag|utf8_cb2_ed_flag|utf8_cb3_f0_flag),
+	thirty2(utf8_cb1_flag|utf8_cb2_flag|utf8_cb3_flag|utf8_cb2_e0_flag|utf8_cb3_f0_flag),
 
 	/* 0xc0-0xc1 */
 	0, 0,
-	      /* 0xc2-0xdf */
-	      2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2,
+
+	/* 0xc2-0xdf */
+	thirty(utf8_lb2_flag),
+
 	/* 0xe0 */
-	4,
-	   /* 0xe1-0xec */
-	   8, 8, 8, 8, 8, 8, 8,
-	8, 8, 8, 8, 8,
-	              /* 0xed */
-	              16,
-	                  /* 0xee-0xef */
-	                  8, 8,
+	utf8_lb3_e0_flag,
+	/* 0xe1-0xec */
+	twelve(utf8_lb3_flag),
+	/* 0xed */
+	utf8_lb3_ed_flag,
+	/* 0xee-0xef */
+	two(utf8_lb3_flag),
+
 	/* 0xf0 */
-	32,
-	   /* 0xf1-0xf3 */
-	   64,64,64,
-	           /* 0xf4 */
-	           128
+	utf8_lb4_f0_flag,
+	/* 0xf1-0xf3 */
+	three(utf8_lb4_flag),
+	/* 0xf4 */
+	utf8_lb4_f4_flag
 };
+
+#undef onehundred27
+#undef thirty
+#undef thirty2
+#undef sixteen
+#undef twelve
+#undef eight
+#undef three
+#undef two
 
 constexpr static const uint16_t utf8_state_dst[16] = {
 	[utf8_asc    ] = utf8_asc_flag
