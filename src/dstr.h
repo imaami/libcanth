@@ -7,12 +7,11 @@
 #define LIBCANTH_SRC_DSTR_H_
 
 #include <limits.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "compiler.h"
+#include "compat.h"
 #include "ligma.h"
 #include "util.h"
 
