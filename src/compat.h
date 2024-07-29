@@ -15,12 +15,13 @@
 #  include <stdbool.h>
 # endif /* __STDC_VERSION__ < 202000L || clang < 15 || gcc < 13.1 */
 
-# if clang_older_than_version(16) \
+# if (__STDC_VERSION__ < 202000L) \
+  || clang_older_than_version(16) \
   || gcc_older_than_version(13,1) \
   || defined(__INTELLISENSE__)
 #  include <stddef.h>
 #  define nullptr NULL
-# endif /* clang < 16 || gcc < 13.1 || __INTELLISENSE__ */
+# endif /* __STDC_VERSION__ < 202000L || clang < 16 || gcc < 13.1 || __INTELLISENSE__ */
 
 # if clang_older_than_version(8)  \
   || gcc_older_than_version(13,1) \
@@ -38,11 +39,12 @@
 #  define fixed_enum(name, T) enum name : T
 # endif /* clang < 8 || gcc < 13.1 || __INTELLISENSE__ */
 
-# if clang_older_than_version(19) \
+# if (__STDC_VERSION__ < 202000L) \
+  || clang_older_than_version(19) \
   || gcc_older_than_version(13,1) \
   || defined(__INTELLISENSE__)
-#  define constexpr __attribute__((const))
-# endif /* clang < 19 || gcc < 13.1 || __INTELLISENSE__ */
+#  define constexpr
+# endif /* __STDC_VERSION__ < 202000L || clang < 19 || gcc < 13.1 || __INTELLISENSE__ */
 #endif /* !__cplusplus */
 
 #ifndef __has_builtin
