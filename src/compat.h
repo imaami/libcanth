@@ -45,6 +45,11 @@
   || defined(__INTELLISENSE__)
 #  define constexpr
 # endif /* __STDC_VERSION__ < 202000L || clang < 19 || gcc < 13.1 || __INTELLISENSE__ */
+
+# if clang_older_than_version(16)
+#  define typeof __typeof__
+# endif /* clang < 16 */
+
 #endif /* !__cplusplus */
 
 #ifndef __has_builtin
