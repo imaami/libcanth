@@ -34,6 +34,11 @@
 
 #ifndef __cplusplus
 
+#define is_negative(x) (_Generic((x), \
+        default:(x), unsigned char:1, \
+        unsigned short:1, unsigned:1, \
+        typeof(1UL):1,typeof(1ULL):1) < (typeof(x))0)
+
 /** @brief Check if a value is a char array.
  */
 #define is_char_array(x) _Generic((typeof(x) *){0}, \
