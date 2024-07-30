@@ -23,6 +23,10 @@
  */
 #define useless __attribute__((unused))
 
+/** @brief Calculate the element count of an array.
+ */
+#define array_size(x) (sizeof(x) / sizeof((x)[0]))
+
 /** @brief Stringify arguments.
  */
 #define stringify(...) stringify_(__VA_ARGS__)
