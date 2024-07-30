@@ -12,7 +12,7 @@ jobs:
     steps:
     - name: Add apt.llvm.org
       run: |
-        echo 'deb http://apt.llvm.org/noble/ llvm-toolchain-noble main' | sudo tee /etc/apt/sources.list.d/apt.llvm.org.list
+        printf -- 'deb http://apt.llvm.org/noble/ llvm-toolchain-noble%s main\n' '' '-19' | sudo tee /etc/apt/sources.list.d/apt.llvm.org.list
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
 
     - name: Upgrade packages
@@ -26,7 +26,7 @@ jobs:
 
     - name: Upgrade Clang
       run: |
-        sudo apt-get install clang{,-{format,tidy,tools}} lib{c++{,abi},clang,omp}-dev lld llvm{,-dev,-runtime} || true
+        sudo apt-get install clang lld llvm-20-linker-tools clang-19 lld-19 llvm-19-linker-tools || true
 
     - name: Add Ubuntu 22.04 and 20.04 package repos
       run: |
