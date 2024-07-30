@@ -3,6 +3,7 @@
  *
  * @author Juuso Alasuutari
  */
+#include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -20,19 +21,28 @@ diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
 #endif /* clang < 19 && clang > 11 */
 
 struct utf8 {
-	size_t   n_u8;
 	size_t   n_uc;
 	uint16_t state;
-	int16_t  error;
-	uint8_t  cache[4];
+	uint8_t  bs[5];
+	uint8_t  error;
 };
 
 static struct utf8
 utf8_parser (void);
 
-static int
-utf8_check (struct utf8 *const u8p,
-            char const *str);
+static uint8_t const *
+utf8_next (struct utf8 *const    u8p,
+           uint8_t const        *ptr,
+           uint8_t const *const  end);
+
+static force_inline char const *
+utf8_result (struct utf8 const *u8p)
+{
+	return (char const *)&u8p->bs[u8p->bs[0]];
+}
+
+static void
+utf8_reset (struct utf8 *const u8p);
 
 #if 0
 static void
@@ -44,12 +54,29 @@ main (int    c,
       char **v)
 {
 	//utf8_flowchart();
+	bool separate = false;
 	struct utf8 u8p = utf8_parser();
 	for (int i = 0; ++i < c;) {
-		int e = utf8_check(&u8p, v[i]);
-		if (e)
-			pr_errno(e, "utf8_check");
+		uint8_t const *q = (uint8_t *)v[i];
+		for (uint8_t const *p = q; *p;) {
+			p = utf8_next(&u8p, p, nullptr);
+			if (u8p.error)
+				break;
+
+			//fputs(utf8_result(&u8p), stdout);
+		}
+
+		if (u8p.error == EILSEQ)
+			utf8_reset(&u8p);
+		else {
+			if (separate)
+				putchar(' ');
+			fputs(v[i], stdout);
+		}
+
+		separate = u8p.error != EAGAIN;
 	}
+	putchar('\n');
 }
 
 #define UTF8_PARSER_DESCRIPTOR(F) \
@@ -68,19 +95,31 @@ main (int    c,
         F(12,  cb2,    0x80,  64, 0, 0) /* 2nd-to-last continuation, follows 0xe1-0xec,0xee-0xef */ \
         F(13,  cb2_e0, 0xa0,  32, 0, 0) /* 2nd-to-last continuation, follows 0xe0                */ \
         F(14,  cb1,    0x80,  64, 0, 0) /* last continuation, common to all multi-byte sequences */ \
-        F(15,  ini,       0,   0, 0 ,0) /* initial state, has no role as a lookup table bit flag */
+        F(15,  ini,       0,   0, 0 ,0) /* initial state bit, never set in lookup table elements */
 
-#define utf8_enum(m)    utf8_##m
-#define utf8_flag(m)    utf8_##m##_flag
+#define utf8_st8(m)     utf8_##m
+#define utf8_bit(m)     (uint16_t)(1U << utf8_st8(m))
 
-#define make_enum(n,m,...)      utf8_enum(m) = n,
-#define make_flag(n,m,...)      utf8_flag(m) = 1U << n,
+#define F(n,m,...)      utf8_st8(m) = n,
+fixed_enum(utf8_st8, uint8_t)   {UTF8_PARSER_DESCRIPTOR(F)};
+#undef F
 
-fixed_enum(utf8_state, uint8_t) {UTF8_PARSER_DESCRIPTOR(make_enum )};
-fixed_enum(utf8_flag, uint16_t) {UTF8_PARSER_DESCRIPTOR(make_flag )};
+static const_inline char const *
+utf8_st8_name (IF_NDEBUG(useless) enum utf8_st8 st8)
+{
+#ifndef NDEBUG
+	constexpr static char const name[][8] = {
+		#define F(n,m,...) [utf8_st8(m)] = #m,
+		UTF8_PARSER_DESCRIPTOR(F)
+		#undef F
+	};
 
-#undef make_enum
-#undef make_flag
+	if (!is_negative(st8) && st8 < array_size(name))
+		return name[st8];
+#endif /* !NDEBUG */
+
+	return nullptr;
+}
 
 #if 0
 #define make_range(n,m,...)     [n] = {__VA_ARGS__},
@@ -89,96 +128,123 @@ const uint8_t utf8_range[][4] = {UTF8_PARSER_DESCRIPTOR(make_range)};
 #undef make_range
 #endif
 
-#define two(x)          x,x
-#define three(x)        x,x,x
-#define eight(x)        x,x,x,x,x,x,x,x
-#define twelve(x)       eight(x),x,x,x,x
-#define sixteen(x)      eight(x),eight(x)
-#define thirty(x)       sixteen(x),twelve(x),x,x
-#define thirty2(x)      sixteen(x),sixteen(x)
-#define onehundred27(x) thirty2(x),thirty2(x),thirty2(x),thirty(x),x
+#define X1(x)   x
+#define X2(x)   x,x
+#define X3(x)   x,x,x
+#define X8(x)   x,x,x,x,x,x,x,x
+#define X11(x)  X8(x),x,x,x
+#define X12(x)  X11(x),x
+#define X16(x)  X8(x),X8(x)
+#define X30(x)  X16(x),X12(x),x,x
+#define X32(x)  X16(x),X16(x)
+#define X128(x) X32(x),X32(x),X32(x),X32(x)
+#define X(n, x) X##n(x)
 
-constexpr static const uint16_t utf8_lut[256] = {
-	/* 0x00 */
-	0,
+constexpr static const uint16_t utf8_lut[] = {
+	X(128,utf8_bit(asc)  ), /* 0x00-0x7f */
 
-	/* 0x01-0x7f */
-	onehundred27(utf8_asc_flag),
+	/* 0x80-0x8f */
+	X(16,utf8_bit(cb3)   \
+	    |utf8_bit(cb3_f4)\
+	    |utf8_bit(cb2)   \
+	    |utf8_bit(cb2_ed)\
+	    |utf8_bit(cb1)   ),
 
-	sixteen(utf8_cb1_flag|utf8_cb2_flag|utf8_cb3_flag|utf8_cb2_ed_flag|utf8_cb3_f4_flag),
-	sixteen(utf8_cb1_flag|utf8_cb2_flag|utf8_cb3_flag|utf8_cb2_ed_flag|utf8_cb3_f0_flag),
-	thirty2(utf8_cb1_flag|utf8_cb2_flag|utf8_cb3_flag|utf8_cb2_e0_flag|utf8_cb3_f0_flag),
+	/* 0x90-0x9f */
+	X(16,utf8_bit(cb3)   \
+	    |utf8_bit(cb3_f0)\
+	    |utf8_bit(cb2)   \
+	    |utf8_bit(cb2_ed)\
+	    |utf8_bit(cb1)   ),
 
-	/* 0xc0-0xc1 */
-	0, 0,
+	/* 0xa0-0xbf */
+	X(32,utf8_bit(cb3)   \
+	    |utf8_bit(cb3_f0)\
+	    |utf8_bit(cb2)   \
+	    |utf8_bit(cb2_e0)\
+	    |utf8_bit(cb1)   ),
 
-	/* 0xc2-0xdf */
-	thirty(utf8_lb2_flag),
-
-	/* 0xe0 */
-	utf8_lb3_e0_flag,
-	/* 0xe1-0xec */
-	twelve(utf8_lb3_flag),
-	/* 0xed */
-	utf8_lb3_ed_flag,
-	/* 0xee-0xef */
-	two(utf8_lb3_flag),
-
-	/* 0xf0 */
-	utf8_lb4_f0_flag,
-	/* 0xf1-0xf3 */
-	three(utf8_lb4_flag),
-	/* 0xf4 */
-	utf8_lb4_f4_flag
+	X( 2,0               ), /* 0xc0-0xc1 */
+	X(30,utf8_bit(lb2)   ), /* 0xc2-0xdf */
+	X( 1,utf8_bit(lb3_e0)), /* 0xe0      */
+	X(12,utf8_bit(lb3)   ), /* 0xe1-0xec */
+	X( 1,utf8_bit(lb3_ed)), /* 0xed      */
+	X( 2,utf8_bit(lb3)   ), /* 0xee-0xef */
+	X( 1,utf8_bit(lb4_f0)), /* 0xf0      */
+	X( 3,utf8_bit(lb4)   ), /* 0xf1-0xf3 */
+	X( 1,utf8_bit(lb4_f4)), /* 0xf4      */
+	X(11,0               ), /* 0xf5-0xff */
 };
 
-#undef onehundred27
-#undef thirty
-#undef thirty2
-#undef sixteen
-#undef twelve
-#undef eight
-#undef three
-#undef two
+#undef X
+#undef X128
+#undef X32
+#undef X30
+#undef X16
+#undef X12
+#undef X11
+#undef X8
+#undef X3
+#undef X2
+#undef X1
 
-constexpr static const uint16_t utf8_state_dst[16] = {
-	[utf8_asc    ] = utf8_asc_flag
-	               | utf8_lb2_flag
-	               | utf8_lb3_e0_flag
-	               | utf8_lb3_flag
-	               | utf8_lb3_ed_flag
-	               | utf8_lb4_f0_flag
-	               | utf8_lb4_flag
-	               | utf8_lb4_f4_flag,
-	[utf8_lb2    ] = utf8_cb1_flag,
-	[utf8_lb3_e0 ] = utf8_cb2_e0_flag,
-	[utf8_lb3    ] = utf8_cb2_flag,
-	[utf8_lb3_ed ] = utf8_cb2_ed_flag,
-	[utf8_lb4_f0 ] = utf8_cb3_f0_flag,
-	[utf8_lb4    ] = utf8_cb3_flag,
-	[utf8_lb4_f4 ] = utf8_cb3_f4_flag,
-	[utf8_cb3_f4 ] = utf8_cb2_flag,
-	[utf8_cb3    ] = utf8_cb2_flag,
-	[utf8_cb3_f0 ] = utf8_cb2_flag,
-	[utf8_cb2_ed ] = utf8_cb1_flag,
-	[utf8_cb2    ] = utf8_cb1_flag,
-	[utf8_cb2_e0 ] = utf8_cb1_flag,
-	[utf8_cb1    ] = utf8_asc_flag
-	               | utf8_lb2_flag
-	               | utf8_lb3_e0_flag
-	               | utf8_lb3_flag
-	               | utf8_lb3_ed_flag
-	               | utf8_lb4_f0_flag
-	               | utf8_lb4_flag
-	               | utf8_lb4_f4_flag,
-	[utf8_ini    ] = utf8_asc_flag
-	               | utf8_lb2_flag
-	               | utf8_lb3_e0_flag
-	               | utf8_lb3_flag
-	               | utf8_lb3_ed_flag
-	               | utf8_lb4_f0_flag
-	               | utf8_lb4_flag
-	               | utf8_lb4_f4_flag,
+constexpr static const uint16_t utf8_dst[16] = {
+	[utf8_asc   ] = utf8_bit(asc)
+	              | utf8_bit(lb2)
+	              | utf8_bit(lb3_e0)
+	              | utf8_bit(lb3)
+	              | utf8_bit(lb3_ed)
+	              | utf8_bit(lb4_f0)
+	              | utf8_bit(lb4)
+	              | utf8_bit(lb4_f4),
+	[utf8_lb2   ] = utf8_bit(cb1),
+	[utf8_lb3_e0] = utf8_bit(cb2_e0),
+	[utf8_lb3   ] = utf8_bit(cb2),
+	[utf8_lb3_ed] = utf8_bit(cb2_ed),
+	[utf8_lb4_f0] = utf8_bit(cb3_f0),
+	[utf8_lb4   ] = utf8_bit(cb3),
+	[utf8_lb4_f4] = utf8_bit(cb3_f4),
+	[utf8_cb3_f4] = utf8_bit(cb2),
+	[utf8_cb3   ] = utf8_bit(cb2),
+	[utf8_cb3_f0] = utf8_bit(cb2),
+	[utf8_cb2_ed] = utf8_bit(cb1),
+	[utf8_cb2   ] = utf8_bit(cb1),
+	[utf8_cb2_e0] = utf8_bit(cb1),
+	[utf8_cb1   ] = utf8_bit(asc)
+	              | utf8_bit(lb2)
+	              | utf8_bit(lb3_e0)
+	              | utf8_bit(lb3)
+	              | utf8_bit(lb3_ed)
+	              | utf8_bit(lb4_f0)
+	              | utf8_bit(lb4)
+	              | utf8_bit(lb4_f4),
+	[utf8_ini   ] = utf8_bit(asc)
+	              | utf8_bit(lb2)
+	              | utf8_bit(lb3_e0)
+	              | utf8_bit(lb3)
+	              | utf8_bit(lb3_ed)
+	              | utf8_bit(lb4_f0)
+	              | utf8_bit(lb4)
+	              | utf8_bit(lb4_f4),
+};
+
+constexpr static const uint8_t utf8_len[16] = {
+	[utf8_asc   ] = 1,
+	[utf8_lb2   ] = 2,
+	[utf8_lb3_e0] = 3,
+	[utf8_lb3   ] = 3,
+	[utf8_lb3_ed] = 3,
+	[utf8_lb4_f0] = 4,
+	[utf8_lb4   ] = 4,
+	[utf8_lb4_f4] = 4,
+	[utf8_cb3_f4] = 3,
+	[utf8_cb3   ] = 3,
+	[utf8_cb3_f0] = 3,
+	[utf8_cb2_ed] = 2,
+	[utf8_cb2   ] = 2,
+	[utf8_cb2_e0] = 2,
+	[utf8_cb1   ] = 1,
+	[utf8_ini   ] = 0,
 };
 
 #if 0
@@ -234,14 +300,14 @@ utf8_flowchart (void)
 	}
 
 	for (size_t src = 0;
-	     src < sizeof utf8_state_dst /
-	           sizeof utf8_state_dst[0]; ++src) {
+	     src < sizeof utf8_dst /
+	           sizeof utf8_dst[0]; ++src) {
 		if (!(utf8_range[src][1] +
 		      utf8_range[src][3]))
 			continue;
-		for (unsigned flags = utf8_state_dst[src],
-		     dst = 0; flags; flags >>= 1U, ++dst) {
-			if (!(flags & 1U))
+		for (unsigned bits = utf8_dst[src],
+		     dst = 0; bits; bits >>= 1U, ++dst) {
+			if (!(bits & 1U))
 				continue;
 			int n = snprintf(&buf[w], sizeof buf - w,
 			                 "\tx%02zx -> x%02x;\n",
@@ -263,31 +329,176 @@ static struct utf8
 utf8_parser (void)
 {
 	return (struct utf8) {
-		.n_u8  = 0,
 		.n_uc  = 0,
-		.state = utf8_ini_flag,
+		.state = utf8_bit(ini),
+		.bs    = {0},
 		.error = 0,
-		.cache = {0}
 	};
 }
 
-static int
-utf8_check (struct utf8 *const u8p,
-            char const *str)
+/**
+ * @brief Convert a state bit to a state index.
+ * @param bit The state bit to convert. Must be a non-zero power of 2.
+ * @return The state index if `bit` is valid, otherwise -1.
+ */
+static const_inline int
+utf8_state_from_bit (uint16_t bit)
 {
-	unsigned char const *p = (void const *)str;
+	return bit && !(bit & (bit - 1U))
+		? __builtin_ctz(bit) : -1;
+}
 
-	if (u8p->state) {
-		for (; *p; ++p) {
-			u8p->state = utf8_state_dst[
-				__builtin_ctz(u8p->state)] & utf8_lut[*p];
-			if (!u8p->state)
-				return EILSEQ;
-			putchar(*p);
+/**
+ * @brief Get a bitmask of allowed states following a given state.
+ * @param st8 The current state index.
+ * @return Bitmask of allowed states following `st8` if it is valid
+ *         input, otherwise 0.
+ */
+static const_inline uint16_t
+utf8_allowed_states (unsigned st8)
+{
+#ifdef NDEBUG
+	if (st8 >= array_size(utf8_dst))
+		return 0;
+#else
+	assert(st8 < array_size(utf8_dst));
+#endif
+	return utf8_dst[st8];
+}
+
+/**
+ * @brief Get the bitmask of allowed states following a given state bit.
+ * @param bit The current state bit. Must be a non-zero power of 2.
+ * @return Bitmask of allowed states following `bit` if it is valid
+ *         input, otherwise 0.
+ */
+static const_inline uint16_t
+utf8_allowed_states_from_bit (uint16_t bit)
+{
+	int s = utf8_state_from_bit(bit);
+#ifdef NDEBUG
+	if (s < 0)
+		return 0;
+#else
+	assert(s >= 0);
+#endif
+	return utf8_dst[s];
+}
+
+static const_inline bool
+utf8_complete (uint16_t bit)
+{
+	assert(bit && !(bit & (bit - 1U)));
+	return bit & (utf8_bit(asc) | utf8_bit(cb1));
+}
+
+static force_inline void
+utf8_push (struct utf8 *const u8p,
+           uint16_t           bit,
+           uint8_t            byte)
+{
+	int st8 = utf8_state_from_bit(bit);
+	if (st8 > -1 && st8 < (int)utf8_ini) {
+		uint8_t pos = (uint8_t)sizeof u8p->bs - utf8_len[st8];
+		//uint8_t k = 0;
+		if (st8 < 8) {
+			// Leading byte or ASCII
+			u8p->bs[0] = pos;
+			__builtin_memset(&u8p->bs[1], 0, sizeof u8p->bs - 1U);
+			//printf(" [\e[1;35m%02" PRIx8 "\e[m]", u8p->bs[0]);
+			//++k;
+		}
+		u8p->bs[pos] = byte;
+		//for (;k < pos; ++k) {
+		//	printf(" [%02" PRIx8 "]", u8p->bs[k]);
+		//}
+		//printf(" [\e[1;35m%02" PRIx8 "\e[m]", u8p->bs[k]);
+		//for (; ++k < sizeof u8p->bs;) {
+		//	printf(" [%02" PRIx8 "]", u8p->bs[k]);
+		//}
+		//putchar('\n');
+	}
+}
+
+static void
+utf8_reset (struct utf8 *const u8p)
+{
+	u8p->state = utf8_bit(ini);
+	u8p->bs[0] = 0;
+	u8p->error = 0;
+}
+
+static uint8_t const *
+utf8_next (struct utf8 *const    u8p,
+           uint8_t const        *ptr,
+           uint8_t const *const  end)
+{
+	int sb = utf8_state_from_bit(u8p->state);
+	if (sb < 0) {
+		u8p->error = ENOTRECOVERABLE;
+		return nullptr;
+	}
+	enum utf8_st8 st8 = (enum utf8_st8)sb;
+
+	if (end) {
+		if (ptr < end) for (;;) {
+			uint16_t bit = utf8_lut[*ptr] & utf8_allowed_states(st8);
+			sb = utf8_state_from_bit(bit);
+			if (sb < 0) {
+				u8p->error = EILSEQ;
+				return nullptr;
+			}
+			pr_dbg("%6s -> %-6s", utf8_st8_name(st8),
+			       utf8_st8_name((enum utf8_st8)sb));
+
+			utf8_push(u8p, bit, *ptr);
+			u8p->state = bit;
+			++ptr;
+
+			if (utf8_complete(bit)) {
+				++u8p->n_uc;
+				u8p->error = 0;
+				break;
+			}
+
+			if (ptr == end) {
+				u8p->error = EAGAIN;
+				return nullptr;
+			}
+
+			st8 = (enum utf8_st8)sb;
+		}
+	} else {
+		if (*ptr) for (;;) {
+			uint16_t bit = utf8_lut[*ptr] & utf8_allowed_states(st8);
+			sb = utf8_state_from_bit(bit);
+			if (sb < 0) {
+				u8p->error = EILSEQ;
+				return nullptr;
+			}
+			pr_dbg("%6s -> %-6s", utf8_st8_name(st8),
+			       utf8_st8_name((enum utf8_st8)sb));
+
+			utf8_push(u8p, bit, *ptr);
+			u8p->state = bit;
+			++ptr;
+
+			if (utf8_complete(bit)) {
+				++u8p->n_uc;
+				u8p->error = 0;
+				break;
+			}
+
+			if (!*ptr) {
+				u8p->error = EAGAIN;
+				return nullptr;
+			}
+
+			st8 = (enum utf8_st8)sb;
 		}
 	}
 
-	return 0;
+	return ptr;
 }
 
 #if clang_older_than_version(19) \
