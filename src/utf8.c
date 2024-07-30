@@ -38,7 +38,10 @@ utf8_next (struct utf8 *const    u8p,
 static force_inline char const *
 utf8_result (struct utf8 const *u8p)
 {
-	return (char const *)&u8p->bs[u8p->bs[0]];
+	uint8_t i = u8p->bs[0];
+	if (u8p->bs[i])
+		i = 1;
+	return (char const *)&u8p->bs[i];
 }
 
 static void
@@ -104,7 +107,7 @@ main (int    c,
 fixed_enum(utf8_st8, uint8_t)   {UTF8_PARSER_DESCRIPTOR(F)};
 #undef F
 
-static const_inline char const *
+IF_NDEBUG(useless) static const_inline char const *
 utf8_st8_name (IF_NDEBUG(useless) enum utf8_st8 st8)
 {
 #ifndef NDEBUG
@@ -392,32 +395,42 @@ utf8_complete (uint16_t bit)
 	return bit & (utf8_bit(asc) | utf8_bit(cb1));
 }
 
+static const_inline bool
+utf8_st8_is_leading_byte (enum utf8_st8 st8)
+{
+	return st8 < (enum utf8_st8)8;
+}
+
 static force_inline void
 utf8_push (struct utf8 *const u8p,
-           uint16_t           bit,
+           enum utf8_st8      st8,
            uint8_t            byte)
 {
-	int st8 = utf8_state_from_bit(bit);
-	if (st8 > -1 && st8 < (int)utf8_ini) {
-		uint8_t pos = (uint8_t)sizeof u8p->bs - utf8_len[st8];
-		//uint8_t k = 0;
-		if (st8 < 8) {
-			// Leading byte or ASCII
-			u8p->bs[0] = pos;
-			__builtin_memset(&u8p->bs[1], 0, sizeof u8p->bs - 1U);
-			//printf(" [\e[1;35m%02" PRIx8 "\e[m]", u8p->bs[0]);
-			//++k;
-		}
-		u8p->bs[pos] = byte;
-		//for (;k < pos; ++k) {
-		//	printf(" [%02" PRIx8 "]", u8p->bs[k]);
-		//}
-		//printf(" [\e[1;35m%02" PRIx8 "\e[m]", u8p->bs[k]);
-		//for (; ++k < sizeof u8p->bs;) {
-		//	printf(" [%02" PRIx8 "]", u8p->bs[k]);
-		//}
-		//putchar('\n');
+#ifndef NDEBUG
+	uint8_t k = 0;
+#endif /* !NDEBUG */
+	uint8_t len = utf8_len[st8];
+	if (utf8_st8_is_leading_byte(st8)) {
+		// Leading byte or ASCII
+		u8p->bs[0] = len;
+		__builtin_memset(&u8p->bs[1], 0, sizeof u8p->bs - 1U);
+#ifndef NDEBUG
+		pr_(" [\033[1;3%" PRIu8 "m%02" PRIx8 "\033[m]", len, len);
+		++k;
+#endif /* !NDEBUG */
 	}
+	uint8_t pos = u8p->bs[0] + 1U - len;
+	u8p->bs[pos] = byte;
+#ifndef NDEBUG
+	for (;k < pos; ++k) {
+		pr_(" [%02" PRIx8 "]", u8p->bs[k]);
+	}
+	pr_(" [\033[1;3%" PRIu8 "m%02" PRIx8 "\033[m]", pos, u8p->bs[k]);
+	for (; ++k < sizeof u8p->bs;) {
+		pr_(" [%02" PRIx8 "]", u8p->bs[k]);
+	}
+	pr_("\n");
+#endif /* !NDEBUG */
 }
 
 static void
@@ -448,10 +461,11 @@ utf8_next (struct utf8 *const    u8p,
 				u8p->error = EILSEQ;
 				return nullptr;
 			}
-			pr_dbg("%6s -> %-6s", utf8_st8_name(st8),
-			       utf8_st8_name((enum utf8_st8)sb));
+			pr_dbg_("%6s -> %-6s", utf8_st8_name(st8),
+			        utf8_st8_name((enum utf8_st8)sb));
 
-			utf8_push(u8p, bit, *ptr);
+			st8 = (enum utf8_st8)sb;
+			utf8_push(u8p, st8, *ptr);
 			u8p->state = bit;
 			++ptr;
 
@@ -465,8 +479,6 @@ utf8_next (struct utf8 *const    u8p,
 				u8p->error = EAGAIN;
 				return nullptr;
 			}
-
-			st8 = (enum utf8_st8)sb;
 		}
 	} else {
 		if (*ptr) for (;;) {
@@ -476,10 +488,11 @@ utf8_next (struct utf8 *const    u8p,
 				u8p->error = EILSEQ;
 				return nullptr;
 			}
-			pr_dbg("%6s -> %-6s", utf8_st8_name(st8),
-			       utf8_st8_name((enum utf8_st8)sb));
+			pr_dbg_("%6s -> %-6s", utf8_st8_name(st8),
+			        utf8_st8_name((enum utf8_st8)sb));
 
-			utf8_push(u8p, bit, *ptr);
+			st8 = (enum utf8_st8)sb;
+			utf8_push(u8p, st8, *ptr);
 			u8p->state = bit;
 			++ptr;
 
@@ -493,8 +506,6 @@ utf8_next (struct utf8 *const    u8p,
 				u8p->error = EAGAIN;
 				return nullptr;
 			}
-
-			st8 = (enum utf8_st8)sb;
 		}
 	}
 
