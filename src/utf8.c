@@ -21,7 +21,6 @@ diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
 #endif /* clang < 19 && clang > 11 */
 
 struct utf8 {
-	size_t   n_uc;
 	uint16_t state;
 	uint8_t  bs[5];
 	uint8_t  error;
@@ -31,11 +30,15 @@ static struct utf8
 utf8_parser (void);
 
 static uint8_t const *
-utf8_next (struct utf8 *const    u8p,
-           uint8_t const        *ptr,
-           uint8_t const *const  end);
+utf8_next (struct utf8 *const  u8p,
+           uint8_t const      *ptr);
 
-static force_inline char const *
+static uint8_t const *
+utf8_next2 (struct utf8 *const    u8p,
+            uint8_t const        *ptr,
+            uint8_t const *const  end);
+
+useless static force_inline char const *
 utf8_result (struct utf8 const *u8p)
 {
 	uint8_t i = u8p->bs[0];
@@ -44,8 +47,11 @@ utf8_result (struct utf8 const *u8p)
 	return (char const *)&u8p->bs[i];
 }
 
-static void
-utf8_reset (struct utf8 *const u8p);
+static force_inline void
+utf8_reset (struct utf8 *const u8p)
+{
+	*u8p = utf8_parser();
+}
 
 #if 0
 static void
@@ -62,7 +68,7 @@ main (int    c,
 	for (int i = 0; ++i < c;) {
 		uint8_t const *q = (uint8_t *)v[i];
 		for (uint8_t const *p = q; *p;) {
-			p = utf8_next(&u8p, p, nullptr);
+			p = utf8_next(&u8p, p);
 			if (u8p.error)
 				break;
 
@@ -83,36 +89,36 @@ main (int    c,
 }
 
 #define UTF8_PARSER_DESCRIPTOR(F) \
-        F( 0,  asc,    0x01, 127, 0, 0) /* ASCII - never followed by continuation byte 0x80-0xbf */ \
-        F( 1,  lb2,    0xc2,  30, 0, 0) /* start of 2-byte sequence, any continuation may follow */ \
-        F( 2,  lb3_e0, 0xe0,   1, 0, 0) /* start of 3-byte sequence, next byte must be 0xa0-0xbf */ \
-        F( 3,  lb3,    0xe1,  12, 1, 2) /* start of 3-byte sequence, any continuation may follow */ \
-        F( 4,  lb3_ed, 0xed,   1, 0, 0) /* start of 3-byte sequence, next byte must be 0x80-0x9f */ \
-        F( 5,  lb4_f0, 0xf0,   1, 0, 0) /* start of 4-byte sequence, next byte must be 0x90-0xbf */ \
-        F( 6,  lb4,    0xf1,   3, 0, 0) /* start of 4-byte sequence, any continuation may follow */ \
-        F( 7,  lb4_f4, 0xf4,   1, 0, 0) /* start of 4-byte sequence, next byte must be 0x80-0x8f */ \
-        F( 8,  cb3_f4, 0x80,  16, 0, 0) /* 3rd-to-last continuation, follows 0xf4                */ \
-        F( 9,  cb3,    0x80,  64, 0, 0) /* 3rd-to-last continuation, follows 0xf1-0xf3           */ \
-        F(10,  cb3_f0, 0x90,  48, 0, 0) /* 3rd-to-last continuation, follows 0xf0                */ \
-        F(11,  cb2_ed, 0x80,  32, 0, 0) /* 2nd-to-last continuation, follows 0xed                */ \
-        F(12,  cb2,    0x80,  64, 0, 0) /* 2nd-to-last continuation, follows 0xe1-0xec,0xee-0xef */ \
-        F(13,  cb2_e0, 0xa0,  32, 0, 0) /* 2nd-to-last continuation, follows 0xe0                */ \
-        F(14,  cb1,    0x80,  64, 0, 0) /* last continuation, common to all multi-byte sequences */ \
-        F(15,  ini,       0,   0, 0 ,0) /* initial state bit, never set in lookup table elements */
+        F( 0,  asc,    1, 0x01, 127, 0, 0) /* ASCII - never followed by continuation byte 0x80-0xbf */ \
+        F( 1,  lb2,    2, 0xc2,  30, 0, 0) /* start of 2-byte sequence, any continuation may follow */ \
+        F( 2,  lb3_e0, 3, 0xe0,   1, 0, 0) /* start of 3-byte sequence, next byte must be 0xa0-0xbf */ \
+        F( 3,  lb3,    3, 0xe1,  12, 1, 2) /* start of 3-byte sequence, any continuation may follow */ \
+        F( 4,  lb3_ed, 3, 0xed,   1, 0, 0) /* start of 3-byte sequence, next byte must be 0x80-0x9f */ \
+        F( 5,  lb4_f0, 4, 0xf0,   1, 0, 0) /* start of 4-byte sequence, next byte must be 0x90-0xbf */ \
+        F( 6,  lb4,    4, 0xf1,   3, 0, 0) /* start of 4-byte sequence, any continuation may follow */ \
+        F( 7,  lb4_f4, 4, 0xf4,   1, 0, 0) /* start of 4-byte sequence, next byte must be 0x80-0x8f */ \
+        F( 8,  cb3_f4, 3, 0x80,  16, 0, 0) /* 3rd-to-last continuation, follows 0xf4                */ \
+        F( 9,  cb3,    3, 0x80,  64, 0, 0) /* 3rd-to-last continuation, follows 0xf1-0xf3           */ \
+        F(10,  cb3_f0, 3, 0x90,  48, 0, 0) /* 3rd-to-last continuation, follows 0xf0                */ \
+        F(11,  cb2_ed, 2, 0x80,  32, 0, 0) /* 2nd-to-last continuation, follows 0xed                */ \
+        F(12,  cb2,    2, 0x80,  64, 0, 0) /* 2nd-to-last continuation, follows 0xe1-0xec,0xee-0xef */ \
+        F(13,  cb2_e0, 2, 0xa0,  32, 0, 0) /* 2nd-to-last continuation, follows 0xe0                */ \
+        F(14,  cb1,    1, 0x80,  64, 0, 0) /* last continuation, common to all multi-byte sequences */ \
+        F(15,  ini,    0,    0,   0, 0 ,0) /* initial state bit, never set in lookup table elements */
 
-#define utf8_st8(m)     utf8_##m
-#define utf8_bit(m)     (uint16_t)(1U << utf8_st8(m))
-
-#define F(n,m,...)      utf8_st8(m) = n,
-fixed_enum(utf8_st8, uint8_t)   {UTF8_PARSER_DESCRIPTOR(F)};
-#undef F
+fixed_enum(utf8_st8, uint8_t) {
+	#define F(n,m,...) utf8_##m = n,
+	UTF8_PARSER_DESCRIPTOR(F)
+	#undef F
+};
+#define utf8_bit(m) (uint16_t)(1U << utf8_##m)
 
 IF_NDEBUG(useless) static const_inline char const *
 utf8_st8_name (IF_NDEBUG(useless) enum utf8_st8 st8)
 {
 #ifndef NDEBUG
 	constexpr static char const name[][8] = {
-		#define F(n,m,...) [utf8_st8(m)] = #m,
+		#define F(n,m,...) [n] = #m,
 		UTF8_PARSER_DESCRIPTOR(F)
 		#undef F
 	};
@@ -124,12 +130,21 @@ utf8_st8_name (IF_NDEBUG(useless) enum utf8_st8 st8)
 	return nullptr;
 }
 
+constexpr static const uint8_t utf8_len[16] = {
+	#define F(n,m,l,...) [n] = l,
+	UTF8_PARSER_DESCRIPTOR(F)
+	#undef F
+};
+
 #if 0
-#define make_range(n,m,...)     [n] = {__VA_ARGS__},
-constexpr static
-const uint8_t utf8_range[][4] = {UTF8_PARSER_DESCRIPTOR(make_range)};
-#undef make_range
+constexpr static const uint8_t utf8_range[][4] = {
+	#define F(n,m,l,...) [n] = {__VA_ARGS__},
+	UTF8_PARSER_DESCRIPTOR(F)
+	#undef F
+};
 #endif
+
+#undef UTF8_PARSER_DESCRIPTOR
 
 #define X1(x)   x
 #define X2(x)   x,x
@@ -231,25 +246,6 @@ constexpr static const uint16_t utf8_dst[16] = {
 	              | utf8_bit(lb4_f4),
 };
 
-constexpr static const uint8_t utf8_len[16] = {
-	[utf8_asc   ] = 1,
-	[utf8_lb2   ] = 2,
-	[utf8_lb3_e0] = 3,
-	[utf8_lb3   ] = 3,
-	[utf8_lb3_ed] = 3,
-	[utf8_lb4_f0] = 4,
-	[utf8_lb4   ] = 4,
-	[utf8_lb4_f4] = 4,
-	[utf8_cb3_f4] = 3,
-	[utf8_cb3   ] = 3,
-	[utf8_cb3_f0] = 3,
-	[utf8_cb2_ed] = 2,
-	[utf8_cb2   ] = 2,
-	[utf8_cb2_e0] = 2,
-	[utf8_cb1   ] = 1,
-	[utf8_ini   ] = 0,
-};
-
 #if 0
 static void
 utf8_flowchart (void)
@@ -332,7 +328,6 @@ static struct utf8
 utf8_parser (void)
 {
 	return (struct utf8) {
-		.n_uc  = 0,
 		.state = utf8_bit(ini),
 		.bs    = {0},
 		.error = 0,
@@ -375,7 +370,7 @@ utf8_allowed_states (unsigned st8)
  * @return Bitmask of allowed states following `bit` if it is valid
  *         input, otherwise 0.
  */
-static const_inline uint16_t
+useless static const_inline uint16_t
 utf8_allowed_states_from_bit (uint16_t bit)
 {
 	int s = utf8_state_from_bit(bit);
@@ -433,18 +428,9 @@ utf8_push (struct utf8 *const u8p,
 #endif /* !NDEBUG */
 }
 
-static void
-utf8_reset (struct utf8 *const u8p)
-{
-	u8p->state = utf8_bit(ini);
-	u8p->bs[0] = 0;
-	u8p->error = 0;
-}
-
 static uint8_t const *
-utf8_next (struct utf8 *const    u8p,
-           uint8_t const        *ptr,
-           uint8_t const *const  end)
+utf8_next (struct utf8 *const  u8p,
+           uint8_t const      *ptr)
 {
 	int sb = utf8_state_from_bit(u8p->state);
 	if (sb < 0) {
@@ -453,59 +439,70 @@ utf8_next (struct utf8 *const    u8p,
 	}
 	enum utf8_st8 st8 = (enum utf8_st8)sb;
 
-	if (end) {
-		if (ptr < end) for (;;) {
-			uint16_t bit = utf8_lut[*ptr] & utf8_allowed_states(st8);
-			sb = utf8_state_from_bit(bit);
-			if (sb < 0) {
-				u8p->error = EILSEQ;
-				return nullptr;
-			}
-			pr_dbg_("%6s -> %-6s", utf8_st8_name(st8),
-			        utf8_st8_name((enum utf8_st8)sb));
-
-			st8 = (enum utf8_st8)sb;
-			utf8_push(u8p, st8, *ptr);
-			u8p->state = bit;
-			++ptr;
-
-			if (utf8_complete(bit)) {
-				++u8p->n_uc;
-				u8p->error = 0;
-				break;
-			}
-
-			if (ptr == end) {
-				u8p->error = EAGAIN;
-				return nullptr;
-			}
+	if (*ptr) for (;;) {
+		uint16_t bit = utf8_lut[*ptr] & utf8_allowed_states(st8);
+		sb = utf8_state_from_bit(bit);
+		if (sb < 0) {
+			u8p->error = EILSEQ;
+			return nullptr;
 		}
-	} else {
-		if (*ptr) for (;;) {
-			uint16_t bit = utf8_lut[*ptr] & utf8_allowed_states(st8);
-			sb = utf8_state_from_bit(bit);
-			if (sb < 0) {
-				u8p->error = EILSEQ;
-				return nullptr;
-			}
-			pr_dbg_("%6s -> %-6s", utf8_st8_name(st8),
-			        utf8_st8_name((enum utf8_st8)sb));
+		pr_dbg_("%6s -> %-6s", utf8_st8_name(st8),
+		        utf8_st8_name((enum utf8_st8)sb));
 
-			st8 = (enum utf8_st8)sb;
-			utf8_push(u8p, st8, *ptr);
-			u8p->state = bit;
-			++ptr;
+		st8 = (enum utf8_st8)sb;
+		utf8_push(u8p, st8, *ptr);
+		u8p->state = bit;
+		++ptr;
 
-			if (utf8_complete(bit)) {
-				++u8p->n_uc;
-				u8p->error = 0;
-				break;
-			}
+		if (utf8_complete(bit)) {
+			u8p->error = 0;
+			break;
+		}
 
-			if (!*ptr) {
-				u8p->error = EAGAIN;
-				return nullptr;
-			}
+		if (!*ptr) {
+			u8p->error = EAGAIN;
+			return nullptr;
+		}
+	}
+
+	return ptr;
+}
+
+useless static uint8_t const *
+utf8_next2 (struct utf8 *const    u8p,
+            uint8_t const        *ptr,
+            uint8_t const *const  end)
+{
+	int sb = utf8_state_from_bit(u8p->state);
+	if (sb < 0) {
+		u8p->error = ENOTRECOVERABLE;
+		return nullptr;
+	}
+	enum utf8_st8 st8 = (enum utf8_st8)sb;
+
+	if (ptr < end) for (;;) {
+		uint16_t bit = utf8_lut[*ptr] & utf8_allowed_states(st8);
+		sb = utf8_state_from_bit(bit);
+		if (sb < 0) {
+			u8p->error = EILSEQ;
+			return nullptr;
+		}
+		pr_dbg_("%6s -> %-6s", utf8_st8_name(st8),
+		        utf8_st8_name((enum utf8_st8)sb));
+
+		st8 = (enum utf8_st8)sb;
+		utf8_push(u8p, st8, *ptr);
+		u8p->state = bit;
+		++ptr;
+
+		if (utf8_complete(bit)) {
+			u8p->error = 0;
+			break;
+		}
+
+		if (ptr == end) {
+			u8p->error = EAGAIN;
+			return nullptr;
 		}
 	}
 
