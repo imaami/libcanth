@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define pr__(f_p, ...)  fprintf(f_p, "" __VA_ARGS__)
+#define pr__(f_p, ...)  (void)fprintf(f_p, "" __VA_ARGS__)
 
 #ifdef NO_VA_OPT
 # include "compat_dbg.h"
