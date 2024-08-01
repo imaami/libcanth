@@ -9,7 +9,7 @@
 
 #include "dbg.h"
 
-__attribute__((nonnull))
+nonnull_in()
 char *
 dbg_mkdtemp_ (char *tmpl)
 {

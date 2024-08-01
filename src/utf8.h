@@ -111,7 +111,7 @@ struct utf8 utf8 (void)
  * @brief Clear a UTF-8 parser object.
  * @param u8p Pointer to parser object.
  */
-__attribute__((nonnull))
+nonnull_in()
 static force_inline void
 utf8_reset (struct utf8 *const u8p)
 {
@@ -129,12 +129,12 @@ utf8_reset (struct utf8 *const u8p)
  *         is encountered, or the original pointer if the pointed-to
  *         byte is a null terminator.
  */
-__attribute__((nonnull,returns_nonnull))
+nonnull_out
 extern uint8_t const *
 utf8_next (struct utf8   *u8p,
-           uint8_t const *ptr);
+           uint8_t const *ptr) nonnull_in();
 
-__attribute__((nonnull,returns_nonnull))
+nonnull_in() nonnull_out
 static force_inline char const *
 utf8_result (struct utf8 const *u8p)
 {

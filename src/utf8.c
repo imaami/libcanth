@@ -248,7 +248,7 @@ utf8_state_from_bit (uint16_t bit)
  * @return `true` on success. On failure sets @ref ut8::error to
  *         `ENOTRECOVERABLE` and returns `false`.
  */
-__attribute__((nonnull))
+nonnull_in()
 static force_inline bool
 utf8_get_state (struct utf8 *const   u8p,
                 enum utf8_st8 *const st8)
@@ -302,7 +302,7 @@ utf8_allowed_states_from_bit (uint16_t bit)
 	return utf8_dst[s];
 }
 
-__attribute__((nonnull))
+nonnull_in()
 static const_inline bool
 utf8_done (struct utf8 const *const u8p)
 {
@@ -315,7 +315,7 @@ utf8_st8_is_leading_byte (enum utf8_st8 st8)
 	return st8 < (enum utf8_st8)8;
 }
 
-__attribute__((nonnull(1)))
+nonnull_in(1)
 static force_inline void
 utf8_push_to_cache (struct utf8 *const u8p,
                     enum utf8_st8      st8,
@@ -347,7 +347,7 @@ utf8_push_to_cache (struct utf8 *const u8p,
 #endif /* !NDEBUG */
 }
 
-__attribute__((nonnull(1,2)))
+nonnull_in(1,2)
 static bool
 utf8_set_state (struct utf8 *const   u8p,
                 enum utf8_st8 *const st8,
@@ -373,7 +373,7 @@ utf8_set_state (struct utf8 *const   u8p,
 	return true;
 }
 
-__attribute__((nonnull,returns_nonnull))
+nonnull_in() nonnull_out
 uint8_t const *
 utf8_next (struct utf8 *const  u8p,
            uint8_t const      *ptr)
@@ -402,7 +402,7 @@ utf8_next (struct utf8 *const  u8p,
 	return ptr;
 }
 
-__attribute__((nonnull,returns_nonnull))
+nonnull_in() nonnull_out
 useless static uint8_t const *
 utf8_next2 (struct utf8 *const    u8p,
             uint8_t const        *ptr,

@@ -8,18 +8,47 @@
 
 #include "compat.h"
 
+#define maybe_parenthesize(...) arg0_if_no_args(naught,__VA_ARGS__)(__VA_ARGS__)
+
+#ifdef NO_VA_OPT
+# if clang_older_than_version(12)
+#  include "ligma.h"
+diag_clang(push)
+diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
+# endif /* clang < 12 */
+# define arg0_if_no_args(a,...) arg0_if_no_args_(, ##__VA_ARGS__ a,)
+# if clang_older_than_version(12)
+diag_clang(pop)
+# endif /* clang < 12 */
+#else
+# define arg0_if_no_args(a,...) arg0_if_no_args_(__VA_OPT__(,) a,)
+#endif
+#define arg0_if_no_args_(a,...) a
+
+#define naught()
+
 /** @brief Instruct the compiler to always inline a function.
  */
 #define force_inline __attribute__((always_inline)) inline
 
 /** @brief Instruct the compiler to always inline a function
- *         and hint that its return value is invariant.
+ *         and to assume its return value is determined only
+ *         by its arguments.
  */
 #define const_inline __attribute__((always_inline,const)) inline
 
 /** @brief Function returns a specific baked-in data pointer.
  */
 #define const_nonnull __attribute__((const,returns_nonnull))
+
+/** @brief Assume that the specified argument indices are not null.
+ */
+#define nonnull_in(...) __attribute__(( \
+        nonnull maybe_parenthesize(__VA_ARGS__)))
+
+/** @brief Assume that the return value of a function is not null.
+ */
+#define nonnull_out __attribute__((returns_nonnull))
 
 /** @brief Suppress compiler warnings about an unused entity.
  */

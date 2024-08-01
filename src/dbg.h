@@ -18,9 +18,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#ifndef NDEBUG
-# include "compat.h"
-#endif /* !NDEBUG */
+#include "util.h"
 
 #define pr__(f_p, ...)  (void)fprintf(f_p, "" __VA_ARGS__)
 
@@ -152,8 +150,7 @@
 })
 
 extern char *
-dbg_mkdtemp_ (char *tmpl)
-__attribute__((nonnull));
+dbg_mkdtemp_ (char *tmpl) nonnull_in();
 
 # define dbg_mkdtemp(x) _Generic(0, default:    \
   (assert((x) != nullptr), dbg_mkdtemp_))(x)
