@@ -6,6 +6,8 @@
 #ifndef LIBCANTH_SRC_UTIL_H_
 #define LIBCANTH_SRC_UTIL_H_
 
+#include "compat.h"
+
 /** @brief Instruct the compiler to always inline a function.
  */
 #define force_inline __attribute__((always_inline)) inline
@@ -26,6 +28,15 @@
 /** @brief Calculate the element count of an array.
  */
 #define array_size(x) (sizeof(x) / sizeof((x)[0]))
+
+/** @brief Assume that a value is within a certain range.
+ */
+#if __has_builtin(__builtin_assume)
+# define assume_value_bits(x, mask) \
+        __builtin_assume((x) == ((x) & (typeof(x))(mask)))
+#else
+# define assume_value_bits(x, mask)
+#endif
 
 /** @brief Stringify arguments.
  */

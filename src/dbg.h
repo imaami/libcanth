@@ -6,6 +6,9 @@
 #ifndef LIBCANTH_SRC_DBG_H_
 #define LIBCANTH_SRC_DBG_H_
 
+#ifndef NDEBUG
+# include <assert.h>
+#endif /* !NDEBUG */
 #include <stddef.h>
 #include <stdio.h>
 #ifdef NDEBUG
@@ -14,6 +17,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#ifndef NDEBUG
+# include "compat.h"
+#endif /* !NDEBUG */
 
 #define pr__(f_p, ...)  (void)fprintf(f_p, "" __VA_ARGS__)
 
@@ -145,9 +152,11 @@
 })
 
 extern char *
-dbg_mkdtemp_ (char *tmpl);
+dbg_mkdtemp_ (char *tmpl)
+__attribute__((nonnull));
 
-# define dbg_mkdtemp dbg_mkdtemp_
+# define dbg_mkdtemp(x) _Generic(0, default:    \
+  (assert((x) != nullptr), dbg_mkdtemp_))(x)
 
 # define dbg_mkfifoat(fd, pt, md) ({            \
   int fd__ = (fd);                              \
