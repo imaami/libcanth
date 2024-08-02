@@ -25,7 +25,7 @@ diag_clang(pop)
 #endif
 #define arg0_if_no_args_(a,...) a
 
-#define naught()
+#define naught(...)
 
 /** @brief Instruct the compiler to always inline a function.
  */
