@@ -366,7 +366,7 @@ utf8_set_state (struct utf8 *const   u8p,
 	u8p->state = next_bit;
 	utf8_push_to_cache(u8p, (enum utf8_st8)e, byte);
 
-	pr_dbg_("\t%6s -> %-6s", utf8_st8_name(*st8),
+	pr_dbg_("  %6s -> %-6s", utf8_st8_name(*st8),
 	                         utf8_st8_name((enum utf8_st8)e));
 
 	*st8 = (enum utf8_st8)e;
@@ -380,20 +380,11 @@ utf8_next (struct utf8 *const  u8p,
 {
 	enum utf8_st8 st8 = utf8_ini;
 
-	if (utf8_get_state(u8p, &st8) && *ptr) {
-		for (;;) {
-			if (!utf8_set_state(u8p, &st8, *ptr))
-				break;
-
+	if (utf8_get_state(u8p, &st8)) {
+		while (utf8_set_state(u8p, &st8, *ptr)) {
 			++ptr;
-
 			if (utf8_done(u8p)) {
 				u8p->error = 0;
-				break;
-			}
-
-			if (!*ptr) {
-				u8p->error = EAGAIN;
 				break;
 			}
 		}

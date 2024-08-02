@@ -18,25 +18,27 @@ main (int    c,
 	struct utf8 u8p = utf8();
 
 	for (int i = 0; ++i < c;) {
-		uint8_t const *p = (uint8_t *)v[i];
-
-		while (*p) {
-			p = utf8_next(&u8p, p);
-			if (u8p.error)
-				break;
-
-			++n_codepts;
-
-			pr_out_("%s%s", &" "[!separate], utf8_result(&u8p));
-			separate ^= separate;
+		size_t n = 0;
+		uint8_t const *q = (uint8_t *)v[i];
+		for (uint8_t const *p; *q; q = p) {
+			p = utf8_next(&u8p, q);
+			if (u8p.error) {
+				if (!*p)
+					break;
+				if (p == q && utf8_expects_leading_byte(&u8p))
+					++p;
+				utf8_reset(&u8p);
+				separate = n_codepts > 0;
+				continue;
+			}
+			pr_out_("%s%s", &" "[!(separate && !n)], utf8_result(&u8p));
+			n++;
+			separate = false;
 		}
 
-		separate = u8p.error != EAGAIN;
-		if (separate) {
-			if (u8p.error == EILSEQ)
-				pr_out_("\033[38;5;196m?\033[m");
-			utf8_reset(&u8p);
-		}
+		n_codepts += n;
+		if (n && !u8p.error)
+			separate = true;
 	}
 
 	pr_out("%s%zu unicode characters", &"\n"[!n_codepts], n_codepts);

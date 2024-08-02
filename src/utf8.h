@@ -144,4 +144,11 @@ utf8_result (struct utf8 const *u8p)
 	return (char const *)&u8p->cache[i];
 }
 
+nonnull_in()
+static const_inline bool
+utf8_expects_leading_byte (struct utf8 const *const u8p)
+{
+	return u8p->state & (utf8_bit(asc) | utf8_bit(cb1) | utf8_bit(ini));
+}
+
 #endif /* LIBCANTH_SRC_UTF8_H_ */
