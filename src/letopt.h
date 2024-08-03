@@ -240,6 +240,8 @@ handle_long_opt (struct letopt *const opt)
 	#undef parse_str
 }
 
+diag(push)
+diag(ignored "-Wunused-label")
 __attribute__((always_inline))
 static inline bool
 handle_short_opt (struct letopt *const opt)
@@ -293,6 +295,7 @@ next:
 	#undef boolean_chr_opt
 	#undef parse_chr
 }
+diag(pop)
 
 noreturn static void
 letopt_helpful_exit (struct letopt *opt);
@@ -465,13 +468,13 @@ ligma_gcc(optimize ("Os"))
 static void
 letopt_usage (struct letopt const *const opt)
 {
-	diag_clang(push)
+	diag(push)
+
 	diag_clang(ignored "-Wgnu-empty-struct")
-	diag_gcc(push)
 	diag_gcc(ignored "-Wpedantic")
 	struct bit_off   { };
-	diag_gcc(pop)
-	diag_clang(pop)
+
+	diag(pop)
 
 	struct bit0x0_on { const char a[1U <<  0U]; };
 	struct bit0x1_on { const char a[1U <<  1U]; };
