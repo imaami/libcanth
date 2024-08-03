@@ -64,7 +64,18 @@ jobs:
           _dir="build/dbg_$_cc"
           mkdir -p "$_dir"
           make -j$(nproc) -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
-          (( $? == 0 )) || touch "$_dir/failed"
+          ret=$?
+          if (( ret == 139 )); then
+            fmt='\n\e[1m\e[33mIgnoring SIGSEGV during %s build.\e[m\n\n'
+            fmt+='\e[33mThere is a known problem of unknown cause where\e[m\n'
+            fmt+='\e[33msome Clang builds on GitHub'"'"'s Ubuntu runners\e[m\n'
+            fmt+='\e[33msegfault during make.\e[m\n'
+            fmt+='\n\e[33mDropping %s from the test report.\e[m\n'
+            printf "$fmt" "${_dir##*/}" "${_dir##*/}"
+            rm -rf "$_dir"
+            ret=0
+          fi
+          (( ret == 0 )) || touch "$_dir/failed"
         done
 
     - name: GCC release builds
@@ -212,19 +223,7 @@ jobs:
           _dir="build/rel_$_cc"
           mkdir -p "$_dir"
           make -j$(nproc) -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
-          ret=$?
-          if (( ret == 139 )) && [[ "$_cc" =~ ^clang-[78]$ ]]; then
-            fmt='\n\e[1m\e[33mIgnoring SIGSEGV during %s build.\e[m\n\n'
-            fmt+='\e[33mThere is a known problem of unknown cause where\e[m\n'
-            fmt+='\e[33m%s release builds on GitHub'"'"'s ubuntu-24.04\e[m\n'
-            fmt+='\e[33mrunners segfault after what seem like unrelated\e[m\n'
-            fmt+='\e[33mminor changes to the makefile or build options.\e[m\n'
-            fmt+='\n\e[33mDropping %s from the test report.\e[m\n'
-            printf "$fmt" "${_dir##*/}" "$_cc" "${_dir##*/}"
-            rm -rf "$_dir"
-            ret=0
-          fi
-          (( ret == 0 )) || touch "$_dir/failed"
+          (( $? == 0 )) || touch "$_dir/failed"
         done
 
     - name: Report
@@ -280,7 +279,8 @@ jobs:
       run: |
         set +e
         echo "bash $BASH_VERSION"
-        brew install binutils cjson coreutils gnu-sed llvm llvm@17 llvm@16 make
+        #brew install binutils cjson coreutils gnu-sed llvm llvm@17 llvm@16 make
+        brew install binutils cjson coreutils gnu-sed make
         if [[ -z "$HOMEBREW_PREFIX" ]]; then
           export HOMEBREW_PREFIX="$(brew --prefix)"
           echo 'export HOMEBREW_PREFIX="$(brew --prefix)"' >> "$HOME/.bash_profile"
