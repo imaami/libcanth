@@ -299,16 +299,36 @@ jobs:
       run: |
         set +e
         uname -a
-        scripts/warnings-summary.sh
+        printf -- '\n+---------+\n|compilers|\n+---------+\n'
         . scripts/lib.sh
         get_compilers
-        printf '%s\n' "${compilers[@]}" | tee compilers
+        declare -a cc_clang cc_gcc
+        declare -A cc_v
+        for _cc in "${compilers[@]}"; do
+          v=$("$_cc" --version 2>&1 | head -1)
+          case "$_cc" in
+          clang*)
+            cc_clang+=("$_cc") ;;
+          gcc*)
+            [[ "$v" =~ GCC ]] || continue
+            cc_gcc+=("$_cc") ;;
+          esac
+          cc_v["$_cc"]="$v"
+        done
+        n=$(printf '%s\n' "${cc_v[@]}" | wc -L)
+        for _cc in "${cc_clang[@]}"; do
+          printf "%-${n}s\t%s\n" "${cc_v[$_cc]}" "$_cc"
+        done | tee compilers_clang
+        for _cc in "${cc_gcc[@]}"; do
+          printf "%-${n}s\t%s\n" "${cc_v[$_cc]}" "$_cc"
+        done | tee compilers_gcc
+        scripts/warnings-summary.sh
 
     - name: GCC debug builds
       shell: bash
       run: |
         set +e
-        for _cc in $(grep '^gcc' compilers); do
+        for _cc in $(cut -f2 compilers_gcc); do
           [[ -z "$_cxx" ]] || printf '\n\n========================================\n'
           "$_cc" --version
           _cxx="${_cc/#gcc/g++}"
@@ -322,7 +342,7 @@ jobs:
       shell: bash
       run: |
         set +e
-        for _cc in $(grep '^clang' compilers); do
+        for _cc in $(cut -f2 compilers_clang); do
           [[ -z "$_cxx" ]] || printf '\n\n========================================\n'
           "$_cc" --version
           _cxx="${_cc/#clang/clang++}"
@@ -336,7 +356,7 @@ jobs:
       shell: bash
       run: |
         set +e
-        for _cc in $(grep '^gcc' compilers); do
+        for _cc in $(cut -f2 compilers_gcc); do
           [[ -z "$_cxx" ]] || printf '\n\n========================================\n'
           "$_cc" --version
           _cxx="${_cc/#gcc/g++}"
@@ -350,7 +370,7 @@ jobs:
       shell: bash
       run: |
         set +e
-        for _cc in $(grep '^clang' compilers); do
+        for _cc in $(cut -f2 compilers_clang); do
           [[ -z "$_cxx" ]] || printf '\n\n========================================\n'
           "$_cc" --version
           _cxx="${_cc/#clang/clang++}"
