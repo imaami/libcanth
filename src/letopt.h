@@ -41,24 +41,18 @@ letopt_state_init (int    argc,
                    char **argv);
 
 extern int
-letopt_get_long_opt_arg (struct letopt_state *const state,
-                         const size_t               len);
+letopt_get_long_opt_arg (struct letopt_state *state,
+                         size_t               len);
 
 extern bool
-letopt_get_number_arg (struct letopt_state *const state,
-                       int64_t *const             dest,
-                       const int64_t              min,
-                       const int64_t              max);
+letopt_get_number_arg (struct letopt_state *state,
+                       int64_t             *dest,
+                       int64_t              min,
+                       int64_t              max);
 
 extern bool
-letopt_get_number_arg (struct letopt_state *const state,
-                       int64_t *const             dest,
-                       const int64_t              min,
-                       const int64_t              max);
-
-extern bool
-letopt_get_string_arg (struct letopt_state *const state,
-                       char const **const         dest);
+letopt_get_string_arg (struct letopt_state  *state,
+                       char const          **dest);
 #endif // OPTIONS || INCLUDED_FROM_LETOPT_C_
 
 #ifdef OPTIONS
