@@ -14,24 +14,20 @@
 	X(boolean, help, 'h', "help",           \
 	  "print this help text and exit")      \
 	                                        \
+	X(boolean, bytes, 'b', "bytes",         \
+	  "count bytes")                        \
+	                                        \
+	X(boolean, chars, 'c', "chars",         \
+	  "count unicode characters")           \
+	                                        \
 	X(boolean, join, 'j', "join",           \
 	  "treat arguments as one string")      \
 	                                        \
-	X(string, mode, 'm', "mode", "one "     \
-	  "of: check, length, quiet, strlen",   \
-	  "MODE", "check")                      \
-	                                        \
-	X(boolean, check, 'c', "check",         \
-	  "synonym for --mode=check")           \
-	                                        \
-	X(boolean, length, 'l', "length",       \
-	  "synonym for --mode=length")          \
+	X(boolean, skip, 's', "skip", "skip "   \
+	  "invalid sequences (no placeholder)") \
 	                                        \
 	X(boolean, quiet, 'q', "quiet",         \
-	  "synonym for --mode=quiet")           \
-	                                        \
-	X(boolean, strlen, 's', "strlen",       \
-	  "synonym for --mode=strlen")
+	  "report invalid UTF-8 via exit code")
 
 #define DETAILS  "Default mode is 'check'."
 
@@ -49,13 +45,13 @@ main (int    c,
 	if (opt.m_help)
 		letopt_helpful_exit(&opt);
 
+	bool need_nl = false;
 	size_t n_codepts = 0;
-	bool wordsep = false;
 	struct utf8 u8p = utf8();
 
-	for (int i = 0; ++i < c;) {
+	for (int i = 0; i < letopt_nargs(&opt); ++i) {
 		size_t n = 0;
-		uint8_t const *p = (uint8_t *)v[i];
+		uint8_t const *p = (uint8_t const *)letopt_arg(&opt, i);
 		for (uint8_t const *q = p; *q; q = p) {
 			p = utf8_next(&u8p, q);
 			if (u8p.error) {
@@ -64,19 +60,24 @@ main (int    c,
 				if (p == q && utf8_expects_leading_byte(&u8p))
 					++p;
 				utf8_reset(&u8p);
-				wordsep = n_codepts > 0;
 				continue;
 			}
-			pr_out_("%s%s", &" "[!(wordsep && !n)], utf8_result(&u8p));
-			n++;
-			wordsep = false;
+			++n;
+			char const *s = utf8_result(&u8p);
+			need_nl = *s != '\n';
+			fputs(s, stdout);
 		}
 
 		n_codepts += n;
-		if (n && !u8p.error)
-			wordsep = true;
+
+		if (!opt.m_join && need_nl) {
+			need_nl = false;
+			putchar('\n');
+		}
 	}
 
-	pr_out("%s%zu unicode characters", &"\n"[!n_codepts], n_codepts);
+	if (opt.m_join && need_nl)
+		putchar('\n');
+
 	return letopt_fini(&opt);
 }
