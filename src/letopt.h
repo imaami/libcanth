@@ -297,6 +297,9 @@ next:
 }
 diag(pop)
 
+static int
+letopt_fini (struct letopt *opt);
+
 noreturn static void
 letopt_helpful_exit (struct letopt *opt);
 
@@ -340,6 +343,18 @@ letopt_init (int    argc,
 		#undef deparen
 		#endif // NO_VA_OPT
 	};
+
+	if (opt.p.e) {
+#ifdef PROGNAME
+		(void)fprintf(stderr, PROGNAME ": %s: %s\n",
+		              __func__, strerror(opt.p.e));
+#else // PROGNAME
+		(void)fprintf(stderr, "%s: %s: %s\n", *argv,
+		              __func__, strerror(opt.p.e));
+#endif // PROGNAME
+		exit(letopt_fini(&opt));
+	}
+
 	struct letopt_state *state = &opt.p;
 	int options_end = state->c;
 
@@ -495,7 +510,7 @@ letopt_usage (struct letopt const *const opt)
 	#undef mk_arr
 
 	if (opt->p.e)
-		fprintf(stderr, "%s\n", strerror(opt->p.e));
+		(void)fprintf(stderr, "%s\n", strerror(opt->p.e));
 
 diag_gcc(push)
 diag_gcc(ignored "-Wpedantic")
