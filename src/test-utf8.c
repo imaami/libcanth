@@ -7,7 +7,7 @@
 #include <inttypes.h>
 
 #define PROGNAME "test-utf8"
-#define SYNOPSIS "[[MODE-OPTION] [OPTION]... [--] ARGS...|--help]"
+#define SYNOPSIS "[OPTION]... [--] [STRING]..."
 #define PURPOSE  "Inspect UTF-8 encoded strings"
 
 #define OPTIONS(X)                              \
@@ -15,21 +15,24 @@
 	  "print this help text and exit")      \
 	                                        \
 	X(boolean, bytes, 'b', "bytes",         \
-	  "count bytes")                        \
+	  "count bytes inside valid UTF-8")     \
 	                                        \
 	X(boolean, chars, 'c', "chars",         \
-	  "count unicode characters")           \
+	  "count valid unicode characters")     \
 	                                        \
 	X(boolean, join, 'j', "join",           \
 	  "treat arguments as one string")      \
 	                                        \
-	X(boolean, skip, 's', "skip", "skip "   \
-	  "invalid sequences (no placeholder)") \
+	X(boolean, skip, 's', "skip",           \
+	  "skip invalid UTF-8, don't replace")  \
 	                                        \
 	X(boolean, quiet, 'q', "quiet",         \
 	  "report invalid UTF-8 via exit code")
 
-#define DETAILS  "Default mode is 'check'."
+#define DETAILS \
+ "The default behaviour without option arguments is to\n" \
+ "print input strings on different lines, substituting\n" \
+ "the replacement symbol U+FFFD for invalid sequences."
 
 #include "letopt.h"
 
