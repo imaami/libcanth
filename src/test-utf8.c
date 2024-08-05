@@ -39,14 +39,45 @@
 #include "dbg.h"
 #include "utf8.h"
 
+static const_inline size_t
+saturated_add_uz (size_t a,
+                  size_t b)
+{
+	if ((a += b) < b)
+		a = SIZE_MAX;
+	return a;
+}
+
+static struct uz2 {
+	size_t max;
+	size_t sum;
+} arg_sizes (struct letopt const *opt)
+{
+	struct uz2 ret = {0};
+	for (int i = 0; i < letopt_nargs(opt); ++i) {
+		size_t n = strlen(letopt_arg(opt, i));
+		ret.sum = saturated_add_uz(ret.sum, n);
+		if (n > ret.max)
+			ret.max = n;
+	}
+	return ret;
+}
+
 int
 main (int    c,
       char **v)
 {
 	struct letopt opt = letopt_init(c, v);
+	struct uz2 arg_sz = arg_sizes(&opt);
 
-	if (opt.m_help)
+	if (!arg_sz.sum || opt.m_help)
 		letopt_helpful_exit(&opt);
+
+	if (arg_sz.sum == SIZE_MAX) {
+		pr_err_("%s", strerror(EOVERFLOW));
+		letopt_fini(&opt);
+		return EXIT_FAILURE;
+	}
 
 	bool need_nl = false;
 	size_t n_codepts = 0;
