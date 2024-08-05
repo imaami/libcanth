@@ -68,20 +68,32 @@ main (int    c,
       char **v)
 {
 	struct letopt opt = letopt_init(c, v);
-	struct uz2 arg_sz = arg_sizes(&opt);
 
-	if (!arg_sz.sum || opt.m_help)
+	if (letopt_nargs(&opt) < 1 || opt.m_help)
 		letopt_helpful_exit(&opt);
 
-	if (arg_sz.sum == SIZE_MAX) {
+	struct uz2 sz = arg_sizes(&opt);
+	size_t buf_sz = opt.m_join ? sz.sum : sz.max;
+	buf_sz = saturated_add_uz(
+		saturated_add_uz(buf_sz, 1U),
+		saturated_add_uz(buf_sz, buf_sz));
+
+	if (buf_sz == SIZE_MAX) {
 		pr_err_("%s", strerror(EOVERFLOW));
-		letopt_fini(&opt);
+		(void)letopt_fini(&opt);
 		return EXIT_FAILURE;
 	}
 
-	bool need_nl = false;
+	char *buf = malloc(buf_sz);
+	if (!buf) {
+		pr_errno_(errno, "malloc(%zu)", buf_sz);
+		(void)letopt_fini(&opt);
+		return EXIT_FAILURE;
+	}
+
 	size_t n_codepts = 0;
 	struct utf8 u8p = utf8();
+	char *out = buf;
 
 	for (int i = 0; i < letopt_nargs(&opt); ++i) {
 		size_t n = 0;
@@ -96,22 +108,32 @@ main (int    c,
 				utf8_reset(&u8p);
 				continue;
 			}
+
 			++n;
-			char const *s = utf8_result(&u8p);
-			need_nl = *s != '\n';
-			fputs(s, stdout);
+
+			for (char const *s = utf8_result(&u8p); *s;) {
+				*out++ = *s++;
+			}
 		}
 
 		n_codepts += n;
 
-		if (!opt.m_join && need_nl) {
-			need_nl = false;
-			putchar('\n');
+		if (!opt.m_join) {
+			*out = '\0';
+			(void)fputs(buf, stdout);
+			if (out == buf || *(out - 1) != '\n')
+				(void)putchar('\n');
+			out = buf;
 		}
 	}
 
-	if (opt.m_join && need_nl)
-		putchar('\n');
+	if (opt.m_join) {
+		*out = '\0';
+		(void)fputs(buf, stdout);
+		if (out == buf || *(out - 1) != '\n')
+			(void)putchar('\n');
+	}
 
+	free(buf);
 	return letopt_fini(&opt);
 }
