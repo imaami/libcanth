@@ -11,15 +11,11 @@
 #define maybe_parenthesize(...) arg0_if_no_args(naught,__VA_ARGS__)(__VA_ARGS__)
 
 #ifdef NO_VA_OPT
-# if clang_older_than_version(12)
-#  include "ligma.h"
+# include "ligma.h"
 diag_clang(push)
 diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
-# endif /* clang < 12 */
 # define arg0_if_no_args(a,...) arg0_if_no_args_(, ##__VA_ARGS__ a,)
-# if clang_older_than_version(12)
 diag_clang(pop)
-# endif /* clang < 12 */
 #else
 # define arg0_if_no_args(a,...) arg0_if_no_args_(__VA_OPT__(,) a,)
 #endif
