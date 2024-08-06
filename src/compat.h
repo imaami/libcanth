@@ -6,8 +6,9 @@
 #ifndef LIBCANTH_SRC_COMPAT_H_
 #define LIBCANTH_SRC_COMPAT_H_
 
+#include "compiler.h"
+
 #ifndef __cplusplus
-# include "compiler.h"
 
 # if (__STDC_VERSION__ < 202000L) \
   || clang_older_than_version(15) \

@@ -18,20 +18,20 @@ diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
                 &"\0: "[!!(fmt)[0]], strerror(e)); \
 } while (0)
 #define pr_out(fmt, ...)    pr_out_(fmt "\n", ## __VA_ARGS__)
-#define pr_wrn_(fmt, ...)   pr_("warning: " fmt "\n", ## __VA_ARGS__)
-#define pr_err_(fmt, ...)   pr_(  "error: " fmt "\n", ## __VA_ARGS__)
-#define pr_errno_(e, ...)   pr__strerror(err_, (e), ## __VA_ARGS__)
-#define pr_wrrno_(e, ...)   pr__strerror(wrn_, (e), ## __VA_ARGS__)
-#define pr_wrn(fmt, ...)    pr_wrn_("%s: " fmt, __func__, ## __VA_ARGS__)
-#define pr_err(fmt, ...)    pr_err_("%s: " fmt, __func__, ## __VA_ARGS__)
-#define pr_errno(e, ...)    pr__strerror(err, (e), ## __VA_ARGS__)
-#define pr_wrrno(e, ...)    pr__strerror(wrn, (e), ## __VA_ARGS__)
+#define pr_xwrn_(fmt, ...)  pr_("warning: " fmt "\n", ## __VA_ARGS__)
+#define pr_xerr_(fmt, ...)  pr_(  "error: " fmt "\n", ## __VA_ARGS__)
+#define pr_xerrno_(e, ...)  pr__strerror(xerr_, (e), ## __VA_ARGS__)
+#define pr_xwrrno_(e, ...)  pr__strerror(xwrn_, (e), ## __VA_ARGS__)
+#define pr_xwrn(fmt, ...)   pr_xwrn_("%s: " fmt, __func__, ## __VA_ARGS__)
+#define pr_xerr(fmt, ...)   pr_xerr_("%s: " fmt, __func__, ## __VA_ARGS__)
+#define pr_xerrno(e, ...)   pr__strerror(xerr, (e), ## __VA_ARGS__)
+#define pr_xwrrno(e, ...)   pr__strerror(xwrn, (e), ## __VA_ARGS__)
 
 #ifndef NDEBUG
-# define pr_dbg_(fmt, ...)  pr_(       fmt "\n", ## __VA_ARGS__)
-# define pr_dbg(fmt, ...)   pr_("%s:%d:%s: " fmt "\n", __FILE__, \
+# define pr_xdbg_(fmt, ...) pr_(       fmt "\n", ## __VA_ARGS__)
+# define pr_xdbg(fmt, ...)  pr_("%s:%d:%s: " fmt "\n", __FILE__, \
                                 __LINE__, __func__, ## __VA_ARGS__)
-#endif /* NDEBUG */
+#endif /* !NDEBUG */
 
 diag_clang(pop)
 

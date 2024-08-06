@@ -19,8 +19,8 @@ diag_apple_clang(pop)
 
 #if clang_older_than_version(19) \
  && clang_newer_than_version(11)
-diag_clang(push)
-diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
+//diag_clang(push)
+//diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
 #endif /* clang < 19 && clang > 11 */
 
 int
@@ -72,5 +72,5 @@ main (int    argc,
 
 #if clang_older_than_version(19) \
  && clang_newer_than_version(11)
-diag_clang(pop)
+//diag_clang(pop)
 #endif /* clang < 19 && clang > 11 */
