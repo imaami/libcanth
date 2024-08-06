@@ -1,9 +1,9 @@
 language: en-US
-tone_instructions: ''
+tone_instructions: 'Get to the point. Be plain, calm and direct. Optimize for information density when speaking. Know that accurate observations are greatly appreciated. Mutual respect is implicit, there is no need for polite reassuring statements to that effect.'
 early_access: true
 enable_free_tier: true
 reviews:
-  profile: chill
+  profile: assertive
   request_changes_workflow: false
   high_level_summary: true
   high_level_summary_placeholder: '@coderabbitai summary'
