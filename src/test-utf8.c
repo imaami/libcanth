@@ -23,6 +23,9 @@
 	X(boolean, join, 'j', "join",           \
 	  "treat arguments as one string")      \
 	                                        \
+	X(boolean, print, 'p', "print",         \
+	  "print strings even when counting")   \
+	                                        \
 	X(boolean, skip, 's', "skip",           \
 	  "skip invalid UTF-8, don't replace")  \
 	                                        \
@@ -35,6 +38,12 @@
  "the replacement symbol U+FFFD for invalid sequences."
 
 #include "letopt.h"
+
+#undef DETAILS
+#undef OPTIONS
+#undef PURPOSE
+#undef SYNOPSIS
+#undef PROGNAME
 
 #include "dbg.h"
 #include "utf8.h"
@@ -63,11 +72,17 @@ static struct uz2 {
 	return ret;
 }
 
+static int
+arg_conflict (struct letopt *opt);
+
 int
 main (int    c,
       char **v)
 {
 	struct letopt opt = letopt_init(c, v);
+
+	if (arg_conflict(&opt))
+		return letopt_fini(&opt);
 
 	if (letopt_nargs(&opt) < 1 || opt.m_help)
 		letopt_helpful_exit(&opt);
@@ -75,7 +90,7 @@ main (int    c,
 	struct uz2 sz = arg_sizes(&opt);
 	size_t buf_sz = opt.m_join ? sz.sum : sz.max;
 	buf_sz = saturated_add_uz(
-		saturated_add_uz(buf_sz, 1U),
+		saturated_add_uz(buf_sz, 2U),
 		saturated_add_uz(buf_sz, buf_sz));
 
 	if (buf_sz == SIZE_MAX) {
@@ -91,16 +106,23 @@ main (int    c,
 		return EXIT_FAILURE;
 	}
 
-	size_t n_codepts = 0;
+	const bool count = opt.m_bytes || opt.m_chars;
+	const bool print = !opt.m_quiet && (opt.m_print || !count);
+	size_t n_chars = 0, n_bytes = 0;
 	struct utf8 u8p = utf8();
 	char *out = buf;
 
 	for (int i = 0; i < letopt_nargs(&opt); ++i) {
-		size_t n = 0;
 		uint8_t const *p = (uint8_t const *)letopt_arg(&opt, i);
 		for (uint8_t const *q = p; *q; q = p) {
 			p = utf8_next(&u8p, q);
 			if (u8p.error) {
+				if (print &&
+				    !opt.m_skip && (*p || !opt.m_join)) {
+					*out++ = (char)(unsigned char)0xefU;
+					*out++ = (char)(unsigned char)0xbfU;
+					*out++ = (char)(unsigned char)0xbdU;
+				}
 				if (!*p)
 					break;
 				if (p == q && utf8_expects_leading_byte(&u8p))
@@ -109,31 +131,100 @@ main (int    c,
 				continue;
 			}
 
-			++n;
+			if (opt.m_bytes)
+				n_bytes += utf8_size(&u8p);
+			if (opt.m_chars)
+				n_chars += 1U;
 
-			for (char const *s = utf8_result(&u8p); *s;) {
-				*out++ = *s++;
+			if (print) {
+				for (char const *s = utf8_result(&u8p); *s;) {
+					*out++ = *s++;
+				}
 			}
 		}
 
-		n_codepts += n;
-
 		if (!opt.m_join) {
-			*out = '\0';
-			(void)fputs(buf, stdout);
-			if (out == buf || *(out - 1) != '\n')
-				(void)putchar('\n');
-			out = buf;
+			if (print) {
+				if (out == buf || *(out - 1) != '\n')
+					*out++ = '\n';
+				*out = '\0';
+				out = buf;
+
+				if (!count)
+					(void)fputs(buf, stdout);
+				else if (!opt.m_bytes || !opt.m_chars)
+					(void)printf("%zu\t%s", opt.m_bytes
+					             ? n_bytes : n_chars, buf);
+				else
+					(void)printf("%zu\t%zu\t%s", n_chars,
+					             n_bytes, buf);
+
+			} else if (count) {
+				if (!opt.m_bytes || !opt.m_chars)
+					(void)printf("%zu\n", opt.m_bytes
+					             ? n_bytes : n_chars);
+				else
+					(void)printf("%zu\t%zu\n", n_chars,
+					             n_bytes);
+			}
+
+			n_chars = 0;
+			n_bytes = 0;
+			utf8_reset(&u8p);
 		}
 	}
 
 	if (opt.m_join) {
-		*out = '\0';
-		(void)fputs(buf, stdout);
-		if (out == buf || *(out - 1) != '\n')
-			(void)putchar('\n');
+		if (print) {
+			if (out == buf || *(out - 1) != '\n')
+				*out++ = '\n';
+			*out = '\0';
+
+			if (!count)
+				(void)fputs(buf, stdout);
+			else if (!opt.m_bytes || !opt.m_chars)
+				(void)printf("%zu\t%s", opt.m_bytes
+				             ? n_bytes : n_chars, buf);
+			else
+				(void)printf("%zu\t%zu\t%s", n_chars,
+				             n_bytes, buf);
+
+		} else if (count) {
+			if (!opt.m_bytes || !opt.m_chars)
+				(void)printf("%zu\n", opt.m_bytes
+				             ? n_bytes : n_chars);
+			else
+				(void)printf("%zu\t%zu\n", n_chars,
+				             n_bytes);
+		}
 	}
 
 	free(buf);
 	return letopt_fini(&opt);
+}
+
+static int
+arg_conflict (struct letopt *opt)
+{
+	bool count = opt->m_bytes || opt->m_chars;
+	int e = 0;
+
+	if (opt->m_quiet) {
+		if (count) {
+			pr_err_("can't count quietly");
+			e = EINVAL;
+		}
+
+		if (opt->m_print) {
+			pr_err_("can't print quietly");
+			e = EINVAL;
+		}
+	}
+
+	if (opt->m_skip &&
+	    (opt->m_quiet || (!opt->m_print && count)))
+		pr_wrn_("skip option ignored");
+
+	opt->p.e = e;
+	return e;
 }

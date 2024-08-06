@@ -145,6 +145,13 @@ utf8_result (struct utf8 const *u8p)
 }
 
 nonnull_in()
+static force_inline size_t
+utf8_size (struct utf8 const *u8p)
+{
+	return u8p->cache[0];
+}
+
+nonnull_in()
 static const_inline bool
 utf8_expects_leading_byte (struct utf8 const *const u8p)
 {
