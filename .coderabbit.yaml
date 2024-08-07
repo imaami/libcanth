@@ -13,7 +13,11 @@ reviews:
   collapse_walkthrough: false
   sequence_diagrams: true
   path_filters: []
-  path_instructions: []
+  path_instructions:
+    - path: "**/*.[ch]"
+      instructions: |
+        Compiler extensions are leveraged whenever useful, but always for
+        specific reasons. There are compatibility macros for everything.
   abort_on_close: true
   auto_review:
     enabled: true
