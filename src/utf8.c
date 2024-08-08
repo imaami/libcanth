@@ -12,10 +12,10 @@
 #include "dbg.h"
 #include "utf8.h"
 
-IF_NDEBUG(useless) static const_inline char const *
-utf8_st8_name (IF_NDEBUG(useless) enum utf8_st8 st8)
-{
 #ifndef NDEBUG
+static const_inline char const *
+utf8_st8_name (enum utf8_st8 st8)
+{
 	constexpr static char const name[][8] = {
 		#define F(n,m,...) [n] = #m,
 		UTF8_PARSER_DESCRIPTOR(F)
@@ -24,10 +24,10 @@ utf8_st8_name (IF_NDEBUG(useless) enum utf8_st8 st8)
 
 	if (!is_negative(st8) && st8 < array_size(name))
 		return name[st8];
-#endif /* !NDEBUG */
 
 	return nullptr;
 }
+#endif /* !NDEBUG */
 
 constexpr static const uint8_t utf8_len[16] = {
 	#define F(n,m,l,...) [n] = l,
@@ -283,25 +283,6 @@ utf8_allowed_states (unsigned st8)
 	return utf8_dst[st8];
 }
 
-/**
- * @brief Get the bitmask of allowed states following a given state bit.
- * @param bit The current state bit. Must be a non-zero power of 2.
- * @return Bitmask of allowed states following `bit` if it is valid
- *         input, otherwise 0.
- */
-useless static const_inline uint16_t
-utf8_allowed_states_from_bit (uint16_t bit)
-{
-	int s = utf8_state_from_bit(bit);
-#ifdef NDEBUG
-	if (s < 0)
-		return 0;
-#else
-	assert(s >= 0);
-#endif
-	return utf8_dst[s];
-}
-
 nonnull_in()
 static const_inline bool
 utf8_done (struct utf8 const *const u8p)
@@ -385,36 +366,6 @@ utf8_next (struct utf8 *const  u8p,
 			++ptr;
 			if (utf8_done(u8p)) {
 				u8p->error = 0;
-				break;
-			}
-		}
-	}
-
-	return ptr;
-}
-
-nonnull_in() nonnull_out
-useless static uint8_t const *
-utf8_next2 (struct utf8 *const    u8p,
-            uint8_t const        *ptr,
-            uint8_t const *const  end)
-{
-	enum utf8_st8 st8 = utf8_ini;
-
-	if (utf8_get_state(u8p, &st8) && ptr < end) {
-		for (;;) {
-			if (!utf8_set_state(u8p, &st8, *ptr))
-				break;
-
-			++ptr;
-
-			if (utf8_done(u8p)) {
-				u8p->error = 0;
-				break;
-			}
-
-			if (ptr == end) {
-				u8p->error = EAGAIN;
 				break;
 			}
 		}
