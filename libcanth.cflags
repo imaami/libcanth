@@ -1,0 +1,1 @@
+-std=gnu23 -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-declaration-after-statement -Wno-disabled-macro-expansion -Wno-gnu-line-marker -Wno-pre-c11-compat -Wno-pre-c23-compat -Wno-pre-c2x-compat -Wno-unknown-warning-option -Wno-unsafe-buffer-usage

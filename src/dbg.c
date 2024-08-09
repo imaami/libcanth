@@ -9,31 +9,24 @@
 
 #include "dbg.h"
 
+nonnull_in()
 char *
 dbg_mkdtemp_ (char *tmpl)
 {
 	char buf[1024];
-	char *arg;
 
-	if (tmpl) {
-		int len = snprintf(&buf[1], sizeof(buf) - 1u, "%s", tmpl);
+	int len = snprintf(&buf[1], sizeof(buf) - 1U, "%s", tmpl);
+	if (len >= 0) {
+		if (len < (int)sizeof(buf) - 2)
+			++len;
+		else
+			len = (int)sizeof(buf) - 2;
 
-		if (len >= 0) {
-			if (len < (int)sizeof(buf) - 2)
-				++len;
-			else
-				len = (int)sizeof(buf) - 2;
-
-			buf[0]     = '"';
-			buf[len++] = '"';
-			buf[len]   = '\0';
-		} else {
-			buf[0] = '\0';
-		}
-
-		arg = buf;
+		buf[0]     = '"';
+		buf[len++] = '"';
+		buf[len]   = '\0';
 	} else {
-		arg = NULL;
+		buf[0] = '\0';
 	}
 
 	errno = 0;
@@ -41,7 +34,7 @@ dbg_mkdtemp_ (char *tmpl)
 	int ec = errno;
 	char const *const q = &"\""[!ret];
 
-	pr_dbg_("mkdtemp(%s) -> %s%s%s", arg, q, ret, q);
+	pr_dbg_("mkdtemp(%s) -> %s%s%s", &buf[0], q, ret, q);
 
 	errno = ec;
 	return ret;

@@ -17,12 +17,6 @@ diag_apple_clang(pop)
 #include "file.h"
 #include "version.h"
 
-#if clang_older_than_version(19) \
- && clang_newer_than_version(11)
-diag_clang(push)
-diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
-#endif /* clang < 19 && clang > 11 */
-
 int
 main (int    argc,
       char **argv)
@@ -54,10 +48,13 @@ main (int    argc,
 					pr_("%.*s\n", (int)n, p);
 					if (b) {
 						for (; --b; ++p) {
-							fputc(*p == '\t' ? '\t' : ' ', stderr);
+							(void)fputc(*p == '\t'
+							            ? '\t'
+							            : ' ',
+							            stderr);
 						}
 					}
-					fputs("^\n", stderr);
+					(void)fputs("^\n", stderr);
 				}
 			}
 		} else {
@@ -69,8 +66,3 @@ main (int    argc,
 
 	return ret;
 }
-
-#if clang_older_than_version(19) \
- && clang_newer_than_version(11)
-diag_clang(pop)
-#endif /* clang < 19 && clang > 11 */

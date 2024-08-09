@@ -6,17 +6,62 @@
 #ifndef LIBCANTH_SRC_UTIL_H_
 #define LIBCANTH_SRC_UTIL_H_
 
+#include "compat.h"
+
+#define maybe_parenthesize(...) arg0_if_no_args(naught,__VA_ARGS__)(__VA_ARGS__)
+
+#ifdef NO_VA_OPT
+# include "ligma.h"
+diag_clang(push)
+diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
+# define arg0_if_no_args(a,...) arg0_if_no_args_(, ##__VA_ARGS__ a,)
+diag_clang(pop)
+#else
+# define arg0_if_no_args(a,...) arg0_if_no_args_(__VA_OPT__(,) a,)
+#endif
+#define arg0_if_no_args_(a,...) a
+
+#define naught(...)
+
 /** @brief Instruct the compiler to always inline a function.
  */
 #define force_inline __attribute__((always_inline)) inline
+
+/** @brief Instruct the compiler to always inline a function
+ *         and to assume its return value is determined only
+ *         by its arguments.
+ */
+#define const_inline __attribute__((always_inline,const)) inline
 
 /** @brief Function returns a specific baked-in data pointer.
  */
 #define const_nonnull __attribute__((const,returns_nonnull))
 
+/** @brief Assume that the specified argument indices are not null.
+ */
+#define nonnull_in(...) __attribute__(( \
+        nonnull maybe_parenthesize(__VA_ARGS__)))
+
+/** @brief Assume that the return value of a function is not null.
+ */
+#define nonnull_out __attribute__((returns_nonnull))
+
 /** @brief Suppress compiler warnings about an unused entity.
  */
 #define useless __attribute__((unused))
+
+/** @brief Calculate the element count of an array.
+ */
+#define array_size(x) (sizeof(x) / sizeof((x)[0]))
+
+/** @brief Assume that a value is within a certain range.
+ */
+#if __has_builtin(__builtin_assume)
+# define assume_value_bits(x, mask) \
+        __builtin_assume((x) == ((x) & (typeof(x))(mask)))
+#else
+# define assume_value_bits(x, mask)
+#endif
 
 /** @brief Stringify arguments.
  */
@@ -24,6 +69,11 @@
 #define stringify_(...) #__VA_ARGS__ ""
 
 #ifndef __cplusplus
+
+#define is_negative(x) (_Generic((x), \
+        default:(x), unsigned char:1, \
+        unsigned short:1, unsigned:1, \
+        typeof(1UL):1,typeof(1ULL):1) < (typeof(x))0)
 
 /** @brief Check if a value is a char array.
  */

@@ -9,6 +9,7 @@
 #define diag_apple_clang(...)   ligma_apple_clang(diagnostic __VA_ARGS__)
 #define diag_clang(...)         ligma_clang(diagnostic __VA_ARGS__)
 #define diag_gcc(...)           ligma_gcc(diagnostic __VA_ARGS__)
+#define diag(...)               diag_clang(__VA_ARGS__) diag_gcc(__VA_ARGS__)
 
 #ifdef __apple_build_version__
 # define ligma_apple_clang      ligma_clang

@@ -14,3 +14,4 @@
 /.vscode
 /build
 /src/test
+/src/test-utf8

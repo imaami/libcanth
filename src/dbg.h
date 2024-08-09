@@ -6,6 +6,9 @@
 #ifndef LIBCANTH_SRC_DBG_H_
 #define LIBCANTH_SRC_DBG_H_
 
+#ifndef NDEBUG
+# include <assert.h>
+#endif /* !NDEBUG */
 #include <stddef.h>
 #include <stdio.h>
 #ifdef NDEBUG
@@ -15,50 +18,155 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define pr__(f_p, ...)  fprintf(f_p, "" __VA_ARGS__)
+#include "ligma.h"
+#include "util.h"
 
-#ifdef NO_VA_OPT
-# include "compat_dbg.h"
-#else /* NO_VA_OPT */
-
-/*
- * These neither prepend the calling function nor append a trailing newline.
+/**
+ * @brief Print to stdout as-is.
  */
-# define pr_(...)       pr__(stderr __VA_OPT__(,) __VA_ARGS__)
-# define pr_out_(...)   pr__(stdout __VA_OPT__(,) __VA_ARGS__)
+#define pr_out_(...)    pr_pfx_(xout_,       __VA_ARGS__)
 
-# define pr__strerror(fn, e, fmt, ...) do {           \
-         pr_##fn(fmt "%s%s" __VA_OPT__(,) __VA_ARGS__ \
-                 , &"\0: "[!!(fmt)[0]], strerror(e)); \
+/**
+ * @brief Append a newline and print to stdout.
+ */
+#define pr_out(...)     pr_pfx_(xout,        __VA_ARGS__)
+
+/**
+ * @brief If `NDEBUG` was defined during compilation do nothing;
+ *        otherwise append a newline and print to stderr.
+ */
+#define pr_dbg_(...)    pr_pfx_(xdbg_,       __VA_ARGS__)
+
+/**
+ * @brief If `NDEBUG` was defined during compilation do nothing;
+ *        otherwise prepend the name of the source file, the current
+ *        line number, and the name of the calling function, append
+ *        a newline, and print to stderr.
+ */
+#define pr_dbg(...)     pr_pfx_(xdbg,        __VA_ARGS__)
+
+/**
+ * @brief Prepend "warning: ", append a newline, and print to stderr.
+ */
+#define pr_wrn_(...)    pr_pfx_(xwrn_,       __VA_ARGS__)
+
+/**
+ * @brief Prepend "warning: " followed by the name of the calling
+ *        function, append a newline, and print to stderr.
+ */
+#define pr_wrn(...)     pr_pfx_(xwrn,        __VA_ARGS__)
+
+/**
+ * @brief Prepend "warning: ", call `strerror()` with the specified
+ *        error number and append the result, append a newline, and
+ *        print to stderr.
+ */
+#define pr_wrrno_(...)  pr_pfx_(xwrrno_,     __VA_ARGS__)
+
+/**
+ * @brief Prepend "warning: " followed by the name of the calling
+ *        function, call `strerror()` with the specified error
+ *        number and append the result, append a newline, and
+ *        print to stderr.
+ */
+#define pr_wrrno(...)   pr_pfx_(xwrrno,      __VA_ARGS__)
+
+/**
+ * @brief Prepend "error: ", append a newline, and print to stderr.
+ */
+#define pr_err_(...)    pr_pfx_(xerr_,       __VA_ARGS__)
+
+/**
+ * @brief Prepend "error: " followed by the name of the calling
+ *        function, append a newline, and print to stderr.
+ */
+#define pr_err(...)     pr_pfx_(xerr,        __VA_ARGS__)
+
+/**
+ * @brief Prepend "error: ", call `strerror()` with the specified
+ *        error number and append the result, append a newline, and
+ *        print to stderr.
+ */
+#define pr_errno_(...)  pr_pfx_(xerrno_,     __VA_ARGS__)
+
+/**
+ * @brief Prepend "error: " followed by the name of the calling
+ *        function, call `strerror()` with the specified error
+ *        number and append the result, append a newline, and
+ *        print to stderr.
+ */
+#define pr_errno(...)   pr_pfx_(xerrno,      __VA_ARGS__)
+
+#define pr_x_(f_p, ...) (void)fprintf(f_p,"" __VA_ARGS__)
+#define pr_pfx_(x, ...) do {                            \
+        diag_clang(push)                                \
+        diag_clang(ignored                              \
+                "-Wgnu-zero-variadic-macro-arguments")  \
+        pr_##x(__VA_ARGS__);                            \
+        diag_clang(pop)                                 \
 } while (0)
 
-/*
- * This appends a trailing newline.
- */
-# define pr_out(fmt, ...)   pr_out_(fmt "\n" __VA_OPT__(,) __VA_ARGS__)
+#ifdef NDEBUG
+# define pr_xdbg_(...)  do{}while(0)
+# define pr_xdbg(...)   do{}while(0)
+#endif /* NDEBUG */
 
-/*
- * These prepend the calling function, but do not append a trailing newline.
- */
-# define pr_wrn_(fmt, ...)  pr_("warning: " fmt "\n" __VA_OPT__(,) __VA_ARGS__)
-# define pr_err_(fmt, ...)  pr_(  "error: " fmt "\n" __VA_OPT__(,) __VA_ARGS__)
-# define pr_errno_(e, ...)  pr__strerror(err_, (e) __VA_OPT__(,) __VA_ARGS__)
-# define pr_wrrno_(e, ...)  pr__strerror(wrn_, (e) __VA_OPT__(,) __VA_ARGS__)
+#ifndef NO_VA_OPT
 
-/*
- * These prepend the calling function, and also append a trailing newline.
- */
-# define pr_wrn(fmt, ...)   pr_wrn_("%s: " fmt, __func__ __VA_OPT__(,) __VA_ARGS__)
-# define pr_err(fmt, ...)   pr_err_("%s: " fmt, __func__ __VA_OPT__(,) __VA_ARGS__)
-# define pr_errno(e, ...)   pr__strerror(err, (e) __VA_OPT__(,) __VA_ARGS__)
-# define pr_wrrno(e, ...)   pr__strerror(wrn, (e) __VA_OPT__(,) __VA_ARGS__)
+# define pr_(...)           pr_x_(stderr __VA_OPT__(,) __VA_ARGS__)
+# define pr_xout_(...)      pr_x_(stdout __VA_OPT__(,) __VA_ARGS__)
+# define pr_xwrn_(fmt, ...) pr_("warning: " fmt "\n" __VA_OPT__(,) __VA_ARGS__)
+# define pr_xwrrno_(e, ...) pr_xstrerr_(xwrn_, (e) __VA_OPT__(,) __VA_ARGS__)
+# define pr_xerr_(fmt, ...) pr_(  "error: " fmt "\n" __VA_OPT__(,) __VA_ARGS__)
+# define pr_xerrno_(e, ...) pr_xstrerr_(xerr_, (e) __VA_OPT__(,) __VA_ARGS__)
+# define pr_xout(fmt, ...)  pr_xout_(fmt "\n" __VA_OPT__(,) __VA_ARGS__)
+# define pr_xwrn(fmt, ...)  pr_xwrn_("%s: " fmt, __func__ __VA_OPT__(,) __VA_ARGS__)
+# define pr_xwrrno(e, ...)  pr_xstrerr_(xwrn, (e) __VA_OPT__(,) __VA_ARGS__)
+# define pr_xerr(fmt, ...)  pr_xerr_("%s: " fmt, __func__ __VA_OPT__(,) __VA_ARGS__)
+# define pr_xerrno(e, ...)  pr_xstrerr_(xerr, (e) __VA_OPT__(,) __VA_ARGS__)
 
-#endif /* NO_VA_OPT */
+# define pr_xstrerr_(x, e, fmt, ...) pr_##x(fmt "%s%s"  \
+        __VA_OPT__(,) __VA_ARGS__, &"\0: "[!!(fmt)[0]], \
+        strerror(e))
+
+# ifndef NDEBUG
+#  define pr_xdbg_(fmt,...) pr_(fmt "\n" __VA_OPT__(,) __VA_ARGS__)
+#  define pr_xdbg(fmt,...)  pr_("%s:%d:%s: " fmt "\n", __FILE__, \
+                                __LINE__, __func__ __VA_OPT__(,) __VA_ARGS__)
+# endif /* !NDEBUG */
+
+#else /* !NO_VA_OPT */
+
+diag_clang(push)
+diag_clang(ignored "-Wgnu-zero-variadic-macro-arguments")
+
+# define pr_(...)           pr_x_(stderr, ## __VA_ARGS__)
+# define pr_xout_(...)      pr_x_(stdout, ## __VA_ARGS__)
+# define pr_xwrn_(fmt, ...) pr_("warning: " fmt "\n", ## __VA_ARGS__)
+# define pr_xwrrno_(e, ...) pr_xstrerr_(xwrn_, (e), ## __VA_ARGS__)
+# define pr_xerr_(fmt, ...) pr_(  "error: " fmt "\n", ## __VA_ARGS__)
+# define pr_xerrno_(e, ...) pr_xstrerr_(xerr_, (e), ## __VA_ARGS__)
+# define pr_xout(fmt, ...)  pr_xout_(fmt "\n", ## __VA_ARGS__)
+# define pr_xwrn(fmt, ...)  pr_xwrn_("%s: " fmt, __func__, ## __VA_ARGS__)
+# define pr_xwrrno(e, ...)  pr_xstrerr_(xwrn, (e), ## __VA_ARGS__)
+# define pr_xerr(fmt, ...)  pr_xerr_("%s: " fmt, __func__, ## __VA_ARGS__)
+# define pr_xerrno(e, ...)  pr_xstrerr_(xerr, (e), ## __VA_ARGS__)
+
+# define pr_xstrerr_(x, e, fmt, ...) pr_##x(fmt "%s%s"  \
+        , ## __VA_ARGS__, &"\0: "[!!(fmt)[0]], strerror(e))
+
+# ifndef NDEBUG
+#  define pr_xdbg_(fmt,...) pr_(fmt "\n", ## __VA_ARGS__)
+#  define pr_xdbg(fmt,...)  pr_("%s:%d:%s: " fmt "\n", __FILE__, \
+                                __LINE__, __func__, ## __VA_ARGS__)
+# endif /* !NDEBUG */
+
+diag_clang(pop)
+
+#endif /* !NO_VA_OPT */
 
 #ifdef NDEBUG
 
-# define pr_dbg_(...)       do{}while(0)
-# define pr_dbg(...)        do{}while(0)
 # define IF_DEBUG(...)
 # define IF_NDEBUG(...)     __VA_ARGS__
 
@@ -78,12 +186,6 @@
 # define dbg_unlinkat       unlinkat
 
 #else /* NDEBUG */
-
-# ifndef NO_VA_OPT
-#  define pr_dbg_(fmt, ...) pr_(       fmt "\n" __VA_OPT__(,) __VA_ARGS__)
-#  define pr_dbg(fmt, ...)  pr_("%s:%d:%s: " fmt "\n", __FILE__, \
-                                __LINE__, __func__ __VA_OPT__(,) __VA_ARGS__)
-# endif /* NO_VA_OPT */
 
 # define IF_DEBUG(...)      __VA_ARGS__
 # define IF_NDEBUG(...)
@@ -145,9 +247,10 @@
 })
 
 extern char *
-dbg_mkdtemp_ (char *tmpl);
+dbg_mkdtemp_ (char *tmpl) nonnull_in();
 
-# define dbg_mkdtemp dbg_mkdtemp_
+# define dbg_mkdtemp(x) _Generic(0, default:    \
+  (assert((x) != nullptr), dbg_mkdtemp_))(x)
 
 # define dbg_mkfifoat(fd, pt, md) ({            \
   int fd__ = (fd);                              \

@@ -1,6 +1,6 @@
 override THIS_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
-override TARGETS := test
+override TARGETS := test test-utf8
 
     all:| $(TARGETS)
   clean:| $(TARGETS:%=clean-%)
@@ -21,7 +21,10 @@ include $(THIS_DIR)../common.mk
 override SRC_test := cc.c cxx.cpp dstr.c file.c test.c
 override DBG_test := dbg.c
 override LIBS_test = $(CJSON_LIBS)
-override CFLAGS_test = $(CJSON_CFLAGS)
+override CFLAGS_test.c = $(CJSON_CFLAGS)
+
+override SRC_test-utf8 := letopt.c test-utf8.c utf8.c
+override DBG_test-utf8 := dbg.c
 
 $(call pkg_libs,libcjson,CJSON_LIBS,-lcjson)
 $(call pkg_cflags,libcjson,CJSON_CFLAGS)
