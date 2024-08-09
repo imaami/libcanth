@@ -29,12 +29,6 @@ utf8_st8_name (enum utf8_st8 st8)
 }
 #endif /* !NDEBUG */
 
-constexpr static const uint8_t utf8_len[16] = {
-	#define F(n,m,l,...) [n] = l,
-	UTF8_PARSER_DESCRIPTOR(F)
-	#undef F
-};
-
 #if 0
 constexpr static const uint8_t utf8_range[][4] = {
 	#define F(n,m,l,...) [n] = {__VA_ARGS__},
@@ -42,8 +36,6 @@ constexpr static const uint8_t utf8_range[][4] = {
 	#undef F
 };
 #endif
-
-#undef UTF8_PARSER_DESCRIPTOR
 
 #define X1(x)   x
 #define X2(x)   x,x
@@ -290,18 +282,47 @@ utf8_done (struct utf8 const *const u8p)
 	return u8p->state & (utf8_bit(asc) | utf8_bit(cb1));
 }
 
+/**
+ * @brief Check if a UTF-8 state index represents a UTF-8 leading byte
+ *        or an ASCII byte.
+ * @param st8 The state index to check.
+ * @return `true` if the state is a leading byte or an ASCII byte, otherwise `false`.
+ */
 static const_inline bool
 utf8_st8_is_leading_byte (enum utf8_st8 st8)
 {
 	return st8 < (enum utf8_st8)8;
 }
 
+/**
+ * @brief Write a byte to a position in the UTF-8 cache determined
+ *        by the cache's internal state and the given state index.
+ *
+ * This function updates the UTF-8 parser's byte cache with a new byte
+ * in the context of the current parser state. If the state represents
+ * a leading byte or an ASCII byte, the cache is reset before update.
+ *
+ * The cache is structured to hold bytes from a multi-byte sequence,
+ * with the leading byte towards the start and continuation bytes
+ * following.
+ *
+ * @param u8p The UTF-8 parser to update.
+ * @param st8 The parser index representation of the UTF-8
+ *            parser's state after reading the given byte.
+ * @param byte The byte to push into the cache.
+ */
 nonnull_in(1)
 static force_inline void
 utf8_push_to_cache (struct utf8 *const u8p,
                     enum utf8_st8      st8,
                     uint8_t            byte)
 {
+	constexpr static const uint8_t utf8_len[16] = {
+		#define F(n,m,l,...) [n] = l,
+		UTF8_PARSER_DESCRIPTOR(F)
+		#undef F
+	};
+
 	uint8_t len = utf8_len[st8] IF_DEBUG(, k = 0);
 
 	if (utf8_st8_is_leading_byte(st8)) {
@@ -327,6 +348,8 @@ utf8_push_to_cache (struct utf8 *const u8p,
 	}
 #endif /* !NDEBUG */
 }
+
+#undef UTF8_PARSER_DESCRIPTOR
 
 nonnull_in(1,2)
 static bool
