@@ -130,11 +130,11 @@ static force_inline dstr
 make_dstr_view_from_decay (char const *const src,
                            size_t            len)
 {
-	return !len || len > UINT_MAX - 1u
+	return !len || len > UINT_MAX - 1U
 	       ? (dstr){0}
 	       : len < sizeof ((dstr *)0)->arr
 	         ? make_dstr_from_small_string(src, len)
-	         : (dstr){.view = src, .size = 0u, .len = (unsigned)len};
+	         : (dstr){.view = src, .size = 0U, .len = (unsigned)len};
 }
 
 /**
@@ -145,12 +145,12 @@ static force_inline dstr
 make_dstr_from_decay (char const *const src,
                       size_t            len)
 {
-	return !len || len > UINT_MAX - 1u
+	return !len || len > UINT_MAX - 1U
 	       ? (dstr){0}
 	       : len < sizeof ((dstr *)0)->arr
 	         ? make_dstr_from_small_string(src, len)
 	         : (dstr){.ptr = __builtin_strndup(src, len),
-	                  .size = (unsigned)len + 1u,
+	                  .size = (unsigned)len + 1U,
 	                  .len = (unsigned)len};
 }
 
@@ -162,9 +162,9 @@ make_dstr_from_decay (char const *const src,
 static force_inline void
 dstr_init (dstr *s)
 {
-	s->ptr = NULL;
-	s->size = 0u;
-	s->len = 0u;
+	s->ptr = nullptr;
+	s->size = 0U;
+	s->len = 0U;
 }
 
 /**

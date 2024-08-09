@@ -42,7 +42,7 @@ dstr_validate_input (char const *src,
 	/* Ensure that there's space for the terminator, and that on 64-bit
 	 * systems the length is not too large to fit in an unsigned int.
 	 */
-	if (n > UINT_MAX - 1u)
+	if (n > UINT_MAX - 1U)
 		return ENAMETOOLONG;
 
 	*len = n;
@@ -61,25 +61,24 @@ dstr_set (dstr       *dest,
 		return false;
 	}
 
-	unsigned int size = dstr_is_pointer(dest) ? dest->size : 0u;
+	unsigned int size = dstr_is_pointer(dest) ? dest->size : 0U;
 	unsigned int len_ = (unsigned int)len;
-	char *ptr;
+	char *ptr = dest->ptr;
 
 	if (len < sizeof dest->arr) {
 		if (size)
-			free(dest->ptr);
+			free(ptr);
 
 		ptr = &dest->arr[0];
-		size = sizeof dest->arr - 1u;
+		size = sizeof dest->arr - 1U;
 
 	} else {
 		if (len_ < size) {
-			ptr = dest->ptr;
 			size = dest->len > len_ ? dest->len : len_;
 
 		} else {
-			char *p = size ? dest->ptr : NULL;
-			size = len_ + 1u;
+			char *p = size ? ptr : nullptr;
+			size = len_ + 1U;
 			ptr = realloc(p, size);
 			if (!ptr) {
 				*err = errno;
@@ -107,8 +106,8 @@ dstr_move (dstr *dest,
 		free(dest->ptr);
 
 	if (dstr_is_array(src)) {
-		__builtin_strncpy(dest->arr, src->arr, sizeof dest->arr - 1u);
-		dest->arr[sizeof dest->arr - 1u] = '\0';
+		__builtin_strncpy(dest->arr, src->arr, sizeof dest->arr - 1U);
+		dest->arr[sizeof dest->arr - 1U] = '\0';
 	} else {
 		dest->ptr = src->ptr;
 		dest->size = src->size;

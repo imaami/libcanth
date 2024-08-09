@@ -6,6 +6,7 @@
 #ifndef LIBCANTH_SRC_UTF8_H_
 #define LIBCANTH_SRC_UTF8_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "compat.h"

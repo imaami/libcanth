@@ -48,10 +48,13 @@ main (int    argc,
 					pr_("%.*s\n", (int)n, p);
 					if (b) {
 						for (; --b; ++p) {
-							fputc(*p == '\t' ? '\t' : ' ', stderr);
+							(void)fputc(*p == '\t'
+							            ? '\t'
+							            : ' ',
+							            stderr);
 						}
 					}
-					fputs("^\n", stderr);
+					(void)fputs("^\n", stderr);
 				}
 			}
 		} else {
