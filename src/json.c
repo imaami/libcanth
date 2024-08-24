@@ -193,7 +193,6 @@ json_parse_neg (struct json_arg arg)
 	return ret;
 }
 
-#ifdef ALT_PARSING
 /**
  * @brief Create a @ref json_ret with a @ref json_ret::size constrained to
  *        the minimum of the remaining buffer size and `ret.size`.
@@ -218,174 +217,54 @@ json_ret_max (const struct json_arg arg,
 		.code = ret.code
 	};
 }
-#endif /* ALT_PARSING */
 
-static struct json_ret
-json_parse_false (struct json_arg arg)
+struct json_kwd {
+	const uint8_t type;
+	const uint8_t size;
+	const char str[6U];
+};
+
+/**
+ * @brief Parse a JSON keyword.
+ * @param arg JSON argument.
+ * @param kwd JSON keyword.
+ * @return JSON return value.
+ */
+static struct json_ret __attribute__((pure))
+json_parse_keyword (const struct json_arg arg,
+                    const struct json_kwd kwd)
 {
-	#ifdef ALT_PARSING
 	struct json_ret ret = json_ret_max(arg, (struct json_ret){
-		.size = sizeof "false" - 1U,
-		.type = json_false,
+		.size = kwd.size,
+		.type = kwd.type,
 		.code = 0
 	});
 
 	unsigned i = 0;
 	char const *const str = (char const *)arg.ptr;
-	while (i < ret.size && str[i] == "false"[i]) {
+	while (i < ret.size && str[i] == kwd.str[i]) {
 		++i;
 	}
 
 	if (i < ret.size) {
 		ret.size = i;
 		ret.code = EILSEQ;
-	} else if (i < sizeof "false" - 1U)
+
+	} else if (i < kwd.size) {
 		ret.code = ENODATA;
-
-	#else /* ALT_PARSING */
-	uint8_t const *p = arg.ptr;
-	struct json_ret ret = {
-		.size = 0,
-		.type = json_false,
-		.code = 0
-	};
-
-	do {
-		if ((ptrdiff_t)(arg.end - arg.ptr) < 5) {
-			if (!(++p < arg.end && (*p != 'a' ||
-			     (++p < arg.end && (*p != 'l' ||
-			     (++p < arg.end && (*p != 's' ||
-			      ++p < arg.end))))))) {
-				ret.code = ENODATA;
-				break;
-			}
-
-		} else if (*++p == 'a' &&
-		           *++p == 'l' &&
-		           *++p == 's' &&
-		           *++p == 'e') {
-			++p;
-			break;
-		}
-
-		ret.code = *p ? EILSEQ : ENODATA;
-	} while (0);
-
-	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
-	#endif /* ALT_PARSING */
-
-	return ret;
-}
-
-static struct json_ret
-json_parse_null (struct json_arg arg)
-{
-	#ifdef ALT_PARSING
-	struct json_ret ret = json_ret_max(arg, (struct json_ret){
-		.size = sizeof "null" - 1U,
-		.type = json_null,
-		.code = 0
-	});
-
-	unsigned i = 0;
-	char const *const str = (char const *)arg.ptr;
-	while (i < ret.size && str[i] == "null"[i]) {
-		++i;
 	}
 
-	if (i < ret.size) {
-		ret.size = i;
-		ret.code = EILSEQ;
-	} else if (i < sizeof "null" - 1U)
-		ret.code = ENODATA;
-
-	#else /* ALT_PARSING */
-	uint8_t const *p = arg.ptr;
-	struct json_ret ret = {
-		.size = 0,
-		.type = json_null,
-		.code = 0
-	};
-
-	do {
-		if ((ptrdiff_t)(arg.end - arg.ptr) < 4) {
-			if (!(++p < arg.end && (*p != 'u' ||
-			     (++p < arg.end && (*p != 'l' ||
-			      ++p < arg.end))))) {
-				ret.code = ENODATA;
-				break;
-			}
-
-		} else if (*++p == 'u' &&
-		           *++p == 'l' &&
-		           *++p == 'l') {
-			++p;
-			break;
-		}
-
-		ret.code = *p ? EILSEQ : ENODATA;
-	} while (0);
-
-	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
-	#endif /* ALT_PARSING */
-
 	return ret;
 }
 
-static struct json_ret
-json_parse_true (struct json_arg arg)
-{
-	#ifdef ALT_PARSING
-	struct json_ret ret = json_ret_max(arg, (struct json_ret){
-		.size = sizeof "true" - 1U,
-		.type = json_true,
-		.code = 0
-	});
-
-	unsigned i = 0;
-	char const *const str = (char const *)arg.ptr;
-	while (i < ret.size && str[i] == "true"[i]) {
-		++i;
-	}
-
-	if (i < ret.size) {
-		ret.size = i;
-		ret.code = EILSEQ;
-	} else if (i < sizeof "true" - 1U)
-		ret.code = ENODATA;
-
-	#else /* ALT_PARSING */
-	uint8_t const *p = arg.ptr;
-	struct json_ret ret = {
-		.size = 0,
-		.type = json_true,
-		.code = 0
-	};
-
-	do {
-		if ((ptrdiff_t)(arg.end - arg.ptr) < 4) {
-			if (!(++p < arg.end && (*p != 'r' ||
-			     (++p < arg.end && (*p != 'u' ||
-			      ++p < arg.end))))) {
-				ret.code = ENODATA;
-				break;
-			}
-
-		} else if (*++p == 'r' &&
-		           *++p == 'u' &&
-		           *++p == 'e') {
-			++p;
-			break;
-		}
-
-		ret.code = *p ? EILSEQ : ENODATA;
-	} while (0);
-
-	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
-	#endif /* ALT_PARSING */
-
-	return ret;
-}
+/* Don't even try. Just accept it and move on. */
+#define json_define_kw(x)      static force_inline struct json_ret \
+json_parse_##x(struct json_arg arg){return json_parse_keyword(arg, \
+(struct json_kwd){json_##x, sizeof #x - 1U, #x});} _Static_assert( \
+sizeof #x > 1U, "keyword is empty"); _Static_assert(sizeof #x - 1U \
+<= sizeof ((struct json_kwd *)0)->str, "keyword exceeds json_kwd")
+json_define_kw(false); json_define_kw(null); json_define_kw(true);
+#undef json_define_kw
 
 static struct json_ret
 json_parse_value (struct json_arg arg)
