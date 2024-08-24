@@ -110,8 +110,8 @@ json_parse_num (struct json_arg arg)
 	return ret;
 }
 
-struct json_ret
-parse_array (useless struct json_arg arg)
+static struct json_ret
+json_parse_array (useless struct json_arg arg)
 {
 	return (struct json_ret){
 		.size = 0,
@@ -120,8 +120,8 @@ parse_array (useless struct json_arg arg)
 	};
 }
 
-struct json_ret
-parse_object (useless struct json_arg arg)
+static struct json_ret
+json_parse_object (useless struct json_arg arg)
 {
 	return (struct json_ret){
 		.size = 0,
@@ -130,8 +130,8 @@ parse_object (useless struct json_arg arg)
 	};
 }
 
-struct json_ret
-parse_string (useless struct json_arg arg)
+static struct json_ret
+json_parse_string (useless struct json_arg arg)
 {
 	return (struct json_ret){
 		.size = 0,
@@ -193,9 +193,56 @@ json_parse_neg (struct json_arg arg)
 	return ret;
 }
 
-struct json_ret
-parse_false (struct json_arg arg)
+#ifdef ALT_PARSING
+/**
+ * @brief Create a @ref json_ret with a @ref json_ret::size constrained to
+ *        the minimum of the remaining buffer size and `ret.size`.
+ *
+ * @param arg @ref json_arg whose unread byte count to use as a constraint.
+ * @param ret @ref json_ret from which to copy the @ref json_ret::type and
+ *            @ref json_ret::code fields, and whose @ref json_ret::size to
+ *            use as a constraint.
+ *
+ * @return A @ref json_ret which is otherwise identical to `ret`, but with
+ *         @ref json_ret::size constrained to the minimum of the remaining
+ *         buffer size and `ret.size`.
+ */
+static const_inline struct json_ret
+json_ret_max (const struct json_arg arg,
+              const struct json_ret ret)
 {
+	uint64_t size = (uint64_t)(ptrdiff_t)(arg.end - arg.ptr);
+	return (struct json_ret){
+		.size = ret.size < size ? ret.size : size,
+		.type = ret.type,
+		.code = ret.code
+	};
+}
+#endif /* ALT_PARSING */
+
+static struct json_ret
+json_parse_false (struct json_arg arg)
+{
+	#ifdef ALT_PARSING
+	struct json_ret ret = json_ret_max(arg, (struct json_ret){
+		.size = sizeof "false" - 1U,
+		.type = json_false,
+		.code = 0
+	});
+
+	unsigned i = 0;
+	char const *const str = (char const *)arg.ptr;
+	while (i < ret.size && str[i] == "false"[i]) {
+		++i;
+	}
+
+	if (i < ret.size) {
+		ret.size = i;
+		ret.code = EILSEQ;
+	} else if (i < sizeof "false" - 1U)
+		ret.code = ENODATA;
+
+	#else /* ALT_PARSING */
 	uint8_t const *p = arg.ptr;
 	struct json_ret ret = {
 		.size = 0,
@@ -225,12 +272,34 @@ parse_false (struct json_arg arg)
 	} while (0);
 
 	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
+	#endif /* ALT_PARSING */
+
 	return ret;
 }
 
-struct json_ret
-parse_null (struct json_arg arg)
+static struct json_ret
+json_parse_null (struct json_arg arg)
 {
+	#ifdef ALT_PARSING
+	struct json_ret ret = json_ret_max(arg, (struct json_ret){
+		.size = sizeof "null" - 1U,
+		.type = json_null,
+		.code = 0
+	});
+
+	unsigned i = 0;
+	char const *const str = (char const *)arg.ptr;
+	while (i < ret.size && str[i] == "null"[i]) {
+		++i;
+	}
+
+	if (i < ret.size) {
+		ret.size = i;
+		ret.code = EILSEQ;
+	} else if (i < sizeof "null" - 1U)
+		ret.code = ENODATA;
+
+	#else /* ALT_PARSING */
 	uint8_t const *p = arg.ptr;
 	struct json_ret ret = {
 		.size = 0,
@@ -258,12 +327,34 @@ parse_null (struct json_arg arg)
 	} while (0);
 
 	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
+	#endif /* ALT_PARSING */
+
 	return ret;
 }
 
-struct json_ret
-parse_true (struct json_arg arg)
+static struct json_ret
+json_parse_true (struct json_arg arg)
 {
+	#ifdef ALT_PARSING
+	struct json_ret ret = json_ret_max(arg, (struct json_ret){
+		.size = sizeof "true" - 1U,
+		.type = json_true,
+		.code = 0
+	});
+
+	unsigned i = 0;
+	char const *const str = (char const *)arg.ptr;
+	while (i < ret.size && str[i] == "true"[i]) {
+		++i;
+	}
+
+	if (i < ret.size) {
+		ret.size = i;
+		ret.code = EILSEQ;
+	} else if (i < sizeof "true" - 1U)
+		ret.code = ENODATA;
+
+	#else /* ALT_PARSING */
 	uint8_t const *p = arg.ptr;
 	struct json_ret ret = {
 		.size = 0,
@@ -291,17 +382,19 @@ parse_true (struct json_arg arg)
 	} while (0);
 
 	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
+	#endif /* ALT_PARSING */
+
 	return ret;
 }
 
 static struct json_ret
-parse_value (struct json_arg arg)
+json_parse_value (struct json_arg arg)
 {
 	struct json_ret ret = {0};
 
 	switch (*arg.ptr) {
 	case '"':
-		ret = parse_string(arg);
+		ret = json_parse_string(arg);
 		break;
 	case '-':
 		// -(0|[1-9][0-9]*)(\.[0-9]+)?([Ee][\+-]?[0-9]+)?
@@ -324,19 +417,19 @@ parse_value (struct json_arg arg)
 		ret = json_parse_num(arg);
 		break;
 	case '[':
-		ret = parse_array(arg);
+		ret = json_parse_array(arg);
 		break;
 	case 'f':
-		ret = parse_false(arg);
+		ret = json_parse_false(arg);
 		break;
 	case 'n':
-		ret = parse_null(arg);
+		ret = json_parse_null(arg);
 		break;
 	case 't':
-		ret = parse_true(arg);
+		ret = json_parse_true(arg);
 		break;
 	case '{':
-		ret = parse_object(arg);
+		ret = json_parse_object(arg);
 		break;
 	default:
 		ret.code = EILSEQ;
@@ -374,10 +467,10 @@ json_describe (struct json_ret  ret,
 }
 
 static struct json_ret
-parse_element (struct json_arg arg)
+json_parse_element (struct json_arg arg)
 {
 	uint8_t const *ptr = json_skip_ws(arg.ptr, arg.end);
-	struct json_ret ret = parse_value((struct json_arg){
+	struct json_ret ret = json_parse_value((struct json_arg){
 		.ptr = ptr,
 		.end = arg.end,
 		.ctx = arg.ctx,
@@ -401,7 +494,7 @@ json_parse (char const *str)
 		.len = strlen(str),
 	};
 
-	struct json_ret ret = parse_element((struct json_arg){
+	struct json_ret ret = json_parse_element((struct json_arg){
 		.ptr = (uint8_t const *)w.buf,
 		.end = &w.buf[w.len],
 		.ctx = &w,

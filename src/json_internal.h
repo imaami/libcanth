@@ -9,6 +9,13 @@
 #include "json.h"
 
 /**
+ * @brief JSON parser internal function type.
+ * @param arg JSON parsing input.
+ * @return JSON parsing result.
+ */
+typedef struct json_ret json_fn (struct json_arg arg);
+
+/**
  * @brief JSON parsing flags.
  */
 fixed_enum(json_flag, uint8_t) {

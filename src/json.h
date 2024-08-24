@@ -41,14 +41,4 @@ struct json_ret {
 extern void
 json_parse (char const *s);
 
-typedef struct json_ret json_fn (struct json_arg);
-
-extern json_fn json_parse_false;
-extern json_fn json_parse_true;
-extern json_fn json_parse_null;
-extern json_fn json_parse_number;
-extern json_fn json_parse_string;
-extern json_fn json_parse_array;
-extern json_fn json_parse_object;
-
 #endif /* LIBCANTH_SRC_JSON_H_ */
