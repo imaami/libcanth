@@ -136,4 +136,13 @@ json_skip_ws (uint8_t const *      ptr,
 	return ptr;
 }
 
+/**
+ * @brief JSON keyword descriptor.
+ */
+struct json_kwd {
+	const uint8_t type; //!< JSON type enum.
+	const uint8_t size; //!< Keyword length.
+	const char str[6U]; //!< Keyword string.
+};
+
 #endif /* LIBCANTH_SRC_JSON_INTERNAL_H_ */

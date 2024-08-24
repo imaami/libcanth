@@ -194,17 +194,17 @@ json_parse_neg (struct json_arg arg)
 }
 
 /**
- * @brief Create a @ref json_ret with a @ref json_ret::size constrained to
- *        the minimum of the remaining buffer size and `ret.size`.
+ * @brief Copy a @ref json_ret while constraining its @ref json_ret::size.
  *
- * @param arg @ref json_arg whose unread byte count to use as a constraint.
- * @param ret @ref json_ret from which to copy the @ref json_ret::type and
- *            @ref json_ret::code fields, and whose @ref json_ret::size to
- *            use as a constraint.
+ * If the remaining buffer size calculated from `arg` is not less than the
+ * @ref json_ret::size of `ret`, the return value is the unmodified `ret`.
+ * If the remaining buffer size is less than that, the result is otherwise
+ * identical except @ref json_ret::size contains the remaining buffer size.
  *
- * @return A @ref json_ret which is otherwise identical to `ret`, but with
- *         @ref json_ret::size constrained to the minimum of the remaining
- *         buffer size and `ret.size`.
+ * @param arg A @ref json_arg for calculating the remaining buffer size.
+ * @param ret The @ref json_ret to copy and possibly constrain.
+ *
+ * @return A copy of `ret`, possibly with a smaller @ref json_ret::size.
  */
 static const_inline struct json_ret
 json_ret_max (const struct json_arg arg,
@@ -217,12 +217,6 @@ json_ret_max (const struct json_arg arg,
 		.code = ret.code
 	};
 }
-
-struct json_kwd {
-	const uint8_t type;
-	const uint8_t size;
-	const char str[6U];
-};
 
 /**
  * @brief Parse a JSON keyword.

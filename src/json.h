@@ -21,21 +21,30 @@ fixed_enum(json_type, uint8_t) {
 	json_object
 };
 
+/**
+ * @brief JSON parser context.
+ */
 struct json_w {
 	unsigned char const *buf;
 	size_t               len;
 };
 
+/**
+ * @brief JSON parser input.
+ */
 struct json_arg {
-	uint8_t const *ptr;
-	uint8_t const *end;
-	struct json_w *ctx;
+	uint8_t const *ptr; //!< Input buffer read pointer.
+	uint8_t const *end; //!< Input buffer end pointer.
+	struct json_w *ctx; //!< Parser context pointer.
 };
 
+/**
+ * @brief JSON parser result.
+ */
 struct json_ret {
-	uint64_t size : 48;
-	uint64_t type :  8;
-	uint64_t code :  8;
+	uint64_t size : 48; //!< Parsed data size.
+	uint64_t type :  8; //!< Parsed data type.
+	uint64_t code :  8; //!< Optional `errno`.
 };
 
 extern void
