@@ -196,43 +196,69 @@ json_parse_neg (struct json_arg arg)
 /**
  * @brief Copy a @ref json_ret while constraining its @ref json_ret::size.
  *
- * If the remaining buffer size calculated from `arg` is not less than the
- * @ref json_ret::size of `ret`, the return value is the unmodified `ret`.
- * If the remaining buffer size is less than that, the result is otherwise
- * identical except @ref json_ret::size contains the remaining buffer size.
+ * If `size` is not less than the @ref json_ret::size field of `ret`, the
+ * return value is the unmodified `ret`. If `size` is less than that, the
+ * return value is a copy of `ret` save for the @ref json_ret::size field
+ * which contains `size`.
  *
- * @param arg A @ref json_arg for calculating the remaining buffer size.
  * @param ret The @ref json_ret to copy and possibly constrain.
+ * @param size The constraint.
  *
  * @return A copy of `ret`, possibly with a smaller @ref json_ret::size.
  */
 static const_inline struct json_ret
-json_ret_max (const struct json_arg arg,
-              const struct json_ret ret)
+json_ret_dup_size_constrained (const struct json_ret ret,
+                               const size_t          size)
 {
-	uint64_t size = (uint64_t)(ptrdiff_t)(arg.end - arg.ptr);
 	return (struct json_ret){
-		.size = ret.size < size ? ret.size : size,
+		.size = ret.size < size
+		      ? ret.size : size,
 		.type = ret.type,
 		.code = ret.code
 	};
 }
 
 /**
+ * @brief Copy a @ref json_ret while constraining its @ref json_ret::size.
+ *
+ * If the remaining buffer size calculated from `arg` is not less than the
+ * @ref json_ret::size of `ret`, the return value is the unmodified `ret`.
+ * If the remaining buffer size is less than that, the result is otherwise
+ * identical except @ref json_ret::size contains the remaining buffer size.
+ *
+ * @param ret The @ref json_ret to copy and possibly constrain.
+ * @param arg A @ref json_arg for calculating the remaining buffer size.
+ *
+ * @return A copy of `ret`, possibly with a smaller @ref json_ret::size.
+ */
+__attribute__((pure)) static force_inline struct json_ret
+json_ret_dup_arg_constrained (const struct json_ret ret,
+                              const struct json_arg arg)
+{
+	return json_ret_dup_size_constrained(
+		ret,
+		(size_t)(arg.end - arg.ptr)
+	);
+}
+
+/**
  * @brief Parse a JSON keyword.
- * @param arg JSON argument.
  * @param kwd JSON keyword.
+ * @param arg JSON argument.
  * @return JSON return value.
  */
 static struct json_ret __attribute__((pure))
-json_parse_keyword (const struct json_arg arg,
-                    const struct json_kwd kwd)
+json_parse_keyword (const struct json_kwd kwd,
+                    const struct json_arg arg)
 {
-	struct json_ret ret = json_ret_max(arg, (struct json_ret){
-		.size = kwd.size,
-		.type = kwd.type,
-		.code = 0
-	});
+	struct json_ret ret = json_ret_dup_arg_constrained(
+		(struct json_ret){
+			.size = kwd.size,
+			.type = kwd.type,
+			.code = 0
+		},
+		arg
+	);
 
 	unsigned i = 0;
 	char const *const str = (char const *)arg.ptr;
@@ -251,14 +277,28 @@ json_parse_keyword (const struct json_arg arg,
 	return ret;
 }
 
-/* Don't even try. Just accept it and move on. */
-#define json_define_kw(x)      static force_inline struct json_ret \
-json_parse_##x(struct json_arg arg){return json_parse_keyword(arg, \
-(struct json_kwd){json_##x, sizeof #x - 1U, #x});} _Static_assert( \
-sizeof #x > 1U, "keyword is empty"); _Static_assert(sizeof #x - 1U \
-<= sizeof ((struct json_kwd *)0)->str, "keyword exceeds json_kwd")
-json_define_kw(false); json_define_kw(null); json_define_kw(true);
-#undef json_define_kw
+#define json_define_keyword(x)               \
+static force_inline struct json_ret          \
+json_parse_##x (struct json_arg a_)          \
+{                                            \
+        return json_parse_keyword(           \
+                (struct json_kwd){           \
+                       .type = json_##x,     \
+                       .size = sizeof #x-1U, \
+                       .str  = #x            \
+                },                           \
+                a_                           \
+        );                                   \
+}                                            \
+_Static_assert(sizeof #x>1U,"");             \
+_Static_assert(sizeof #x-1U <=               \
+        sizeof ((struct json_kwd *)0)->str,"")
+
+json_define_keyword(false);
+json_define_keyword(null);
+json_define_keyword(true);
+
+#undef json_define_keyword
 
 static struct json_ret
 json_parse_value (struct json_arg arg)
