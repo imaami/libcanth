@@ -1,6 +1,6 @@
 override THIS_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
-override TARGETS := test test-json test-utf8
+override TARGETS := stochar test test-json test-utf8
 
     all:| $(TARGETS)
   clean:| $(TARGETS:%=clean-%)
@@ -17,6 +17,9 @@ override PUBLISH :=            \
 ifneq (,$(filter $(PUBLISH),$(or $(MAKECMDGOALS),all)))
 
 include $(THIS_DIR)../common.mk
+
+override SRC_stochar := letopt.c stochar.c utf8.c
+override DBG_stochar := dbg.c
 
 override SRC_test := cc.c cxx.cpp dstr.c file.c test.c
 override DBG_test := dbg.c
