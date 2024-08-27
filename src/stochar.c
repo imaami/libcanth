@@ -122,7 +122,11 @@ union code_point {
 
 _Static_assert(sizeof(union code_point) * CHAR_BIT == 32U,"");
 
-#define BAD_CODE_POINT (constexpr union code_point){.u32 = UINT32_MAX}
+#if clang_at_least_version(19)
+# define BAD_CODE_POINT (const union code_point){.u32 = UINT32_MAX}
+#else
+# define BAD_CODE_POINT (constexpr const union code_point){.u32 = UINT32_MAX}
+#endif
 
 static const_inline bool
 code_point_error (const union code_point c)
@@ -229,7 +233,9 @@ main (int    c,
 				continue;
 			}
 
-			union code_point c = utf8_code_point(&u8p);
+			const union code_point uc = utf8_code_point(&u8p);
+			if (!code_point_error(uc))
+				printf("U+%04" PRIx32 "\n", uc.u32);
 		}
 
 		if (opt.m_separate) {
