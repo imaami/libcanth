@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/** @file stochastic-unicode.c
+/** @file stochar.c
  *
  * @author Juuso Alasuutari
  */
@@ -8,7 +8,7 @@
 
 #define PROGNAME "stochar"
 #define SYNOPSIS "[OPTION]... [--] [STRING]..."
-#define PURPOSE  "Converts UTF-8 to stochastic unicode."
+#define PURPOSE  "Converts stochastic unicode to/from UTF-8."
 
 #define OPTIONS(X)                                    \
 	X(boolean, help, 'h', "help",                 \
@@ -23,7 +23,7 @@
 #define DETAILS                                       \
  "Given no options, input strings are concatenated\n" \
  "and invalid UTF-8 sequences silently ignored.\n\n"  \
- "Encoder output should be considered binary data,\n" \
+ "Encoded output should be considered binary data,\n" \
  "it is not printable in any existing encoding."
 
 #include "letopt.h"
@@ -60,6 +60,26 @@ static struct uz2 {
 	}
 	return ret;
 }
+
+/**
+ * @brief Unicode code point encoding kind.
+ *
+ * These serve a dual purpose: they act as identifiers for different
+ * encodings, and their enumeration values themselves are defined as
+ * something relevant to that specific encoding. `UCP_UTF8_*` values
+ * are the number of bytes when encoding as UTF-8, `UCP_UTF32_*` the
+ * maximum amount of data bits the corresponding code points use.
+ */
+fixed_enum(ucp_kind, uint32_t) {
+	UCP_UTF8_1   = 1,
+	UCP_UTF8_2   = 2,
+	UCP_UTF8_3   = 3,
+	UCP_UTF8_4   = 4,
+	UCP_UTF32_7  = 7,
+	UCP_UTF32_11 = 11,
+	UCP_UTF32_16 = 16,
+	UCP_UTF32_21 = 21
+};
 
 union code_point {
 	uint32_t u32;
@@ -175,11 +195,10 @@ utf8_to_utf32 (const union code_point c,
 static union code_point
 utf8_code_point (struct utf8 *const u8p)
 {
-	char const *const s = utf8_result(u8p);
+	uint8_t const *const d = (uint8_t const *)utf8_result(u8p);
 	return utf8_to_utf32(
-		(union code_point){
-			.str = {s[0], s[1], s[2], s[3]}
-		}, utf8_size(u8p)
+		(union code_point){.u8 = {d[0], d[1], d[2], d[3]}},
+		utf8_size(u8p)
 	);
 }
 
@@ -199,7 +218,7 @@ main (int    c,
 		saturated_add_uz(buf_sz, buf_sz));
 
 	if (buf_sz == SIZE_MAX) {
-		pr_err_("%s", strerror(EOVERFLOW));
+		pr_errno_(EOVERFLOW, "refusing to allocate buffer");
 		(void)letopt_fini(&opt);
 		return EXIT_FAILURE;
 	}
