@@ -108,9 +108,61 @@ fixed_enum(ucp_kind, uint32_t) {
 	UCP_UTF32_21 = 21  //!< 4-byte UTF-8 as UTF-32
 };
 
-/**
- * @brief 4-byte UTF-8 encoding.
- */
+/** @brief UTF-32 conversion from 1-byte UTF-8. */
+struct ucp_utf32_7 {
+	uint32_t b0 :  7; //!< ASCII byte   [ 0: 6]
+	uint32_t p0 : 25; //!<              [ 7:31]
+};
+
+/** @brief UTF-32 conversion from 2-byte UTF-8. */
+struct ucp_utf32_11 {
+	uint32_t b1 :  6; //!< Cont. byte 1 [ 0: 5]
+	uint32_t b0 :  5; //!< Leading byte [ 6:11]
+	uint32_t p0 : 21; //!<              [12:31]
+};
+
+/** @brief UTF-32 conversion from 3-byte UTF-8. */
+struct ucp_utf32_16 {
+	uint32_t b2 :  6; //!< Cont. byte 2 [ 0: 5]
+	uint32_t b1 :  6; //!< Cont. byte 1 [ 6:11]
+	uint32_t b0 :  4; //!< Leading byte [12:15]
+	uint32_t p0 : 16; //!<              [16:31]
+};
+
+/** @brief UTF-32 conversion from 4-byte UTF-8. */
+struct ucp_utf32_21 {
+	uint32_t b3 :  6; //!< Cont. byte 3 [ 0: 5]
+	uint32_t b2 :  6; //!< Cont. byte 2 [ 6:11]
+	uint32_t b1 :  6; //!< Cont. byte 1 [12:17]
+	uint32_t b0 :  3; //!< Leading byte [18:20]
+	uint32_t p0 : 11; //!<              [21:31]
+};
+
+/** @brief 1-byte UTF-8 encoding. */
+struct ucp_utf8_1 {
+	uint32_t b0 :  7; //!< ASCII byte   [ 0: 6]
+	uint32_t p1 : 25; //!<              [ 7:31]
+};
+
+/** @brief 2-byte UTF-8 encoding. */
+struct ucp_utf8_2 {
+	uint32_t b0 :  5; //!< Leading byte [ 0: 4]
+	uint32_t p0 :  3; //!<              [ 5: 7]
+	uint32_t b1 :  6; //!< Cont. byte 1 [ 8:13]
+	uint32_t p1 : 18; //!<              [14:31]
+};
+
+/** @brief 3-byte UTF-8 encoding. */
+struct ucp_utf8_3 {
+	uint32_t b0 :  4; //!< Leading byte [ 0: 3]
+	uint32_t p0 :  4; //!<              [ 4: 7]
+	uint32_t b1 :  6; //!< Cont. byte 1 [ 8:13]
+	uint32_t p1 :  2; //!<              [14:15]
+	uint32_t b2 :  6; //!< Cont. byte 2 [16:21]
+	uint32_t p2 : 10; //!<              [22:31]
+};
+
+/** @brief 4-byte UTF-8 encoding. */
 struct ucp_utf8_4 {
 	uint32_t b0 :  3; //!< Leading byte [ 0: 2]
 	uint32_t p0 :  5; //!<              [ 3: 7]
@@ -129,117 +181,64 @@ struct ucp_utf8_4 {
  * various encodings, moving data bits around between them,
  * and for use as by-value function arguments.
  */
-struct ucp {
-	union {
-		/** @brief Raw 32-bit data. */
-		uint32_t u32;
+union ucp {
+	uint32_t            u32;     //!< Raw 32-bit data view.
 
-		/** @brief UTF-32 conversion from 1-byte UTF-8. */
-		struct {
-			uint32_t b0 :  7; //!< ASCII byte   [ 0: 6]
-			uint32_t p0 : 25; //!< Padding      [ 7:31]
-		} utf32_0;
+	struct ucp_utf32_7  utf32_0; //!< 7b UTF-32/1B UTF-8 view.
+	struct ucp_utf32_11 utf32_1; //!< 11b UTF-32/2B UTF-8 view.
+	struct ucp_utf32_16 utf32_2; //!< 16b UTF-32/3B UTF-8 view.
+	struct ucp_utf32_21 utf32_3; //!< 21b UTF-32/4B UTF-8 view.
 
-		/** @brief UTF-32 conversion from 2-byte UTF-8. */
-		struct {
-			uint32_t b1 :  6; //!< Cont. byte 1 [ 0: 5]
-			uint32_t b0 :  5; //!< Leading byte [ 6:11]
-			uint32_t p0 : 21; //!< Padding      [12:31]
-		} utf32_1;
+	uint8_t             u8[4];   //!< Raw octets view.
 
-		/** @brief UTF-32 conversion from 3-byte UTF-8. */
-		struct {
-			uint32_t b2 :  6; //!< Cont. byte 2 [ 0: 5]
-			uint32_t b1 :  6; //!< Cont. byte 1 [ 6:11]
-			uint32_t b0 :  4; //!< Leading byte [12:15]
-			uint32_t p0 : 16; //!< Padding      [16:31]
-		} utf32_2;
+	struct ucp_utf8_1   utf8_0;  //!< 1B UTF-8 view.
+	struct ucp_utf8_2   utf8_1;  //!< 2B UTF-8 view.
+	struct ucp_utf8_3   utf8_2;  //!< 3B UTF-8 view.
+	struct ucp_utf8_4   utf8_3;  //!< 4B UTF-8 view.
 
-		/** @brief UTF-32 conversion from 4-byte UTF-8. */
-		struct {
-			uint32_t b3 :  6; //!< Cont. byte 3 [ 0: 5]
-			uint32_t b2 :  6; //!< Cont. byte 2 [ 6:11]
-			uint32_t b1 :  6; //!< Cont. byte 1 [12:17]
-			uint32_t b0 :  3; //!< Leading byte [18:20]
-			uint32_t p0 : 11; //!< Padding      [21:31]
-		} utf32_3;
-
-		/** @brief Raw 8-bit data. */
-		uint8_t u8[4];
-
-		/** @brief Data bit accessor for 1-byte UTF-8 encoding. */
-		struct {
-			uint32_t b0 :  7; //!< ASCII byte   [ 0: 6]
-			uint32_t p1 : 25; //!<              [ 7:31]
-		} utf8_0;
-
-		/** @brief Data bit accessor for 2-byte UTF-8 encoding. */
-		struct {
-			uint32_t b0 :  5; //!< Leading byte [ 0: 4]
-			uint32_t p0 :  3; //!<              [ 5: 7]
-			uint32_t b1 :  6; //!< Cont. byte 1 [ 8:13]
-			uint32_t p1 : 18; //!<              [14:31]
-		} utf8_1;
-
-		/** @brief Data bit accessor for 3-byte UTF-8 encoding. */
-		struct {
-			uint32_t b0 :  4; //!< Leading byte [ 0: 3]
-			uint32_t p0 :  4; //!<              [ 4: 7]
-			uint32_t b1 :  6; //!< Cont. byte 1 [ 8:13]
-			uint32_t p1 :  2; //!<              [14:15]
-			uint32_t b2 :  6; //!< Cont. byte 2 [16:21]
-			uint32_t p2 : 10; //!<              [22:31]
-		} utf8_2;
-
-		struct ucp_utf8_4 utf8_3; //!< 4-byte UTF-8 encoding view.
-
-		/** @brief Raw byte data. */
-		unsigned char data[4];
-
-		/** @brief Raw character data. */
-		char          str[4];
-	}; //!< @anon
+	unsigned char       data[4]; //!< Raw bytes view.
+	char                str[4];  //!< Raw characters view.
 };
 
-_Static_assert(sizeof(struct ucp) * CHAR_BIT == 32U,"");
+_Static_assert(sizeof(union ucp) * CHAR_BIT == 32U,"");
 
 #if clang_at_least_version(19)
-# define BAD_CODE_POINT (const struct ucp){.u32 = UINT32_MAX}
+# define BAD_CODE_POINT (const union ucp){.u32 = UINT32_MAX}
 #else
-# define BAD_CODE_POINT (constexpr const struct ucp){.u32 = UINT32_MAX}
+# define BAD_CODE_POINT (constexpr const union ucp){.u32 = UINT32_MAX}
 #endif
 
 static const_inline bool
-code_point_error (const struct ucp c)
+code_point_error (const union ucp c)
 {
 	return c.u32 == BAD_CODE_POINT.u32;
 }
 
-static const_inline struct ucp
-utf8_to_utf32 (const struct ucp c,
-               const size_t     n)
+static const_inline union ucp
+utf8_to_utf32 (const union ucp c,
+               const size_t    n)
 {
 	switch (n) {
 	case 1:
-		return (struct ucp){
+		return (union ucp){
 			.utf32_0.b0 = c.utf8_0.b0,
 			.utf32_0.p0 = 0
 		};
 	case 2:
-		return (struct ucp){
+		return (union ucp){
 			.utf32_1.b1 = c.utf8_1.b1,
 			.utf32_1.b0 = c.utf8_1.b0,
 			.utf32_1.p0 = 0
 		};
 	case 3:
-		return (struct ucp){
+		return (union ucp){
 			.utf32_2.b2 = c.utf8_2.b2,
 			.utf32_2.b1 = c.utf8_2.b1,
 			.utf32_2.b0 = c.utf8_2.b0,
 			.utf32_2.p0 = 0
 		};
 	case 4:
-		return (struct ucp){
+		return (union ucp){
 			.utf32_3.b3 = c.utf8_3.b3,
 			.utf32_3.b2 = c.utf8_3.b2,
 			.utf32_3.b1 = c.utf8_3.b1,
@@ -253,12 +252,12 @@ utf8_to_utf32 (const struct ucp c,
 	return BAD_CODE_POINT;
 }
 
-static struct ucp
+static union ucp
 utf8_code_point (struct utf8 *const u8p)
 {
 	uint8_t const *const d = (uint8_t const *)utf8_result(u8p);
 	return utf8_to_utf32(
-		(struct ucp){.u8 = {d[0], d[1], d[2], d[3]}},
+		(union ucp){.u8 = {d[0], d[1], d[2], d[3]}},
 		utf8_size(u8p)
 	);
 }
@@ -301,8 +300,8 @@ main (int    c,
 			p = utf8_parse_next_code_point(&u8p, q);
 			if (u8p.error) {
 				if (opt.m_replace && (*p || opt.m_separate)) {
-					const struct ucp uc = utf8_to_utf32(
-						(struct ucp){
+					const union ucp uc = utf8_to_utf32(
+						(union ucp){
 							.u8 = {0xefU, 0xbfU,
 							       0xbdU, 0x00U}
 						},
@@ -323,7 +322,7 @@ main (int    c,
 				continue;
 			}
 
-			const struct ucp uc = utf8_code_point(&u8p);
+			const union ucp uc = utf8_code_point(&u8p);
 			if (!code_point_error(uc))
 				printf("U+%04" PRIx32 "\n", uc.u32);
 		}
