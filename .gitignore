@@ -13,5 +13,7 @@
 /.qtc_clangd
 /.vscode
 /build
+/src/stochar
 /src/test
+/src/test-json
 /src/test-utf8
