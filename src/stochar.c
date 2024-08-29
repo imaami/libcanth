@@ -52,8 +52,8 @@ arg_sizes_max (struct letopt const *opt)
 	size_t ret = 0;
 	for (int i = 0, m = letopt_nargs(opt); i < m; ++i) {
 		size_t n = __builtin_strlen(letopt_arg(opt, i));
-		if (n > ret)
-			ret = n;
+		if (n > ret && (ret = n) == SIZE_MAX)
+			break;
 	}
 	return ret;
 }
@@ -80,9 +80,8 @@ arg_sizes_sum (struct letopt const *opt)
 {
 	size_t ret = 0;
 	for (int i = 0, m = letopt_nargs(opt); i < m; ++i) {
-		ret = saturated_add_uz(ret,
-		                       __builtin_strlen(letopt_arg(opt, i)));
-		if (ret == SIZE_MAX)
+		size_t n = __builtin_strlen(letopt_arg(opt, i));
+		if ((ret = saturated_add_uz(ret, n)) == SIZE_MAX)
 			break;
 	}
 	return ret;
