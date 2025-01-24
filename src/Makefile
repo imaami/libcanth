@@ -23,7 +23,7 @@ override DBG_test := dbg.c
 override LIBS_test = $(CJSON_LIBS)
 override CFLAGS_test.c = $(CJSON_CFLAGS)
 
-override SRC_test-utf8 := letopt.c test-utf8.c utf8.c
+override SRC_test-utf8 := letopt.c test-utf8.c utf8.c utf8_graph.c
 override DBG_test-utf8 := dbg.c
 
 $(call pkg_libs,libcjson,CJSON_LIBS,-lcjson)

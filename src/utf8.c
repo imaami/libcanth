@@ -7,8 +7,9 @@
 #include <errno.h>
 #include <inttypes.h>
 
+#include "utf8_priv.h"
+
 #include "dbg.h"
-#include "utf8.h"
 
 #ifndef NDEBUG
 static const_inline char const *
@@ -26,14 +27,6 @@ utf8_st8_name (enum utf8_st8 st8)
 	return nullptr;
 }
 #endif /* !NDEBUG */
-
-#if 0
-constexpr static const uint8_t utf8_range[][4] = {
-	#define F(n,m,l,...) [n] = {__VA_ARGS__},
-	UTF8_PARSER_DESCRIPTOR(F)
-	#undef F
-};
-#endif
 
 #define X1(x)   x
 #define X2(x)   x,x
@@ -95,123 +88,7 @@ constexpr static const uint16_t utf8_lut[] = {
 #undef X2
 #undef X1
 
-constexpr static const uint16_t utf8_dst[16] = {
-	[utf8_asc   ] = utf8_bit(asc)
-	              | utf8_bit(lb2)
-	              | utf8_bit(lb3_e0)
-	              | utf8_bit(lb3)
-	              | utf8_bit(lb3_ed)
-	              | utf8_bit(lb4_f0)
-	              | utf8_bit(lb4)
-	              | utf8_bit(lb4_f4),
-	[utf8_lb2   ] = utf8_bit(cb1),
-	[utf8_lb3_e0] = utf8_bit(cb2_e0),
-	[utf8_lb3   ] = utf8_bit(cb2),
-	[utf8_lb3_ed] = utf8_bit(cb2_ed),
-	[utf8_lb4_f0] = utf8_bit(cb3_f0),
-	[utf8_lb4   ] = utf8_bit(cb3),
-	[utf8_lb4_f4] = utf8_bit(cb3_f4),
-	[utf8_cb3_f4] = utf8_bit(cb2),
-	[utf8_cb3   ] = utf8_bit(cb2),
-	[utf8_cb3_f0] = utf8_bit(cb2),
-	[utf8_cb2_ed] = utf8_bit(cb1),
-	[utf8_cb2   ] = utf8_bit(cb1),
-	[utf8_cb2_e0] = utf8_bit(cb1),
-	[utf8_cb1   ] = utf8_bit(asc)
-	              | utf8_bit(lb2)
-	              | utf8_bit(lb3_e0)
-	              | utf8_bit(lb3)
-	              | utf8_bit(lb3_ed)
-	              | utf8_bit(lb4_f0)
-	              | utf8_bit(lb4)
-	              | utf8_bit(lb4_f4),
-	[utf8_ini   ] = utf8_bit(asc)
-	              | utf8_bit(lb2)
-	              | utf8_bit(lb3_e0)
-	              | utf8_bit(lb3)
-	              | utf8_bit(lb3_ed)
-	              | utf8_bit(lb4_f0)
-	              | utf8_bit(lb4)
-	              | utf8_bit(lb4_f4),
-};
-
-#if 0
-static void
-utf8_flowchart (void)
-{
-	char buf[1024] = "digraph {\n";
-	size_t w = sizeof "digraph {";
-
-	for (size_t i = 0; i < sizeof utf8_range / sizeof utf8_range[0]; ++i) {
-		unsigned a = utf8_range[i][0];
-		unsigned b = utf8_range[i][1];
-		unsigned c = utf8_range[i][2];
-		unsigned d = utf8_range[i][3];
-		if (!c) {
-			b += d;
-			d = 0;
-		} else if (!d)
-			c = 0;
-		if (!(b + d))
-			continue;
-
-		int n = snprintf(&buf[w], sizeof buf - w,
-		                 "\tx%02zx [label=\"[", i);
-		if (n < 1)
-			return;
-		w += (size_t)n;
-		if (b) {
-			n = b == 1
-			    ? snprintf(&buf[w], sizeof buf - w,
-			               "\\\\x%02x", a)
-			    : snprintf(&buf[w], sizeof buf - w,
-			               "\\\\x%02x-\\\\x%02x", a, a + b - 1);
-			if (n < 1)
-				return;
-			w += (size_t)n;
-		}
-		if (d) {
-			n = d == 1
-			    ? snprintf(&buf[w], sizeof buf - w,
-			               "\\\\x%02x", a + b + c)
-			    : snprintf(&buf[w], sizeof buf - w,
-			               "\\\\x%02x-\\\\x%02x", a + b + c, a + b + c + d - 1);
-			if (n < 1)
-				return;
-			w += (size_t)n;
-		}
-		buf[w++] = ']';
-		buf[w++] = '\"';
-		buf[w++] = ']';
-		buf[w++] = ';';
-		buf[w++] = '\n';
-	}
-
-	for (size_t src = 0;
-	     src < sizeof utf8_dst /
-	           sizeof utf8_dst[0]; ++src) {
-		if (!(utf8_range[src][1] +
-		      utf8_range[src][3]))
-			continue;
-		for (unsigned bits = utf8_dst[src],
-		     dst = 0; bits; bits >>= 1U, ++dst) {
-			if (!(bits & 1U))
-				continue;
-			int n = snprintf(&buf[w], sizeof buf - w,
-			                 "\tx%02zx -> x%02x;\n",
-			                 src, dst);
-			if (n < 1)
-				return;
-			w += (size_t)n;
-		}
-	}
-
-	buf[w++] = '}';
-	buf[w++] = '\n';
-	buf[w] = '\0';
-	fputs(buf, stdout);
-}
-#endif
+constexpr static const UTF8_PARSER_STATE_MAP(utf8_dst);
 
 /**
  * @brief Convert a parser state from a bit flag representation

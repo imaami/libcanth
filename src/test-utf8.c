@@ -30,7 +30,10 @@
 	  "skip invalid UTF-8, don't replace")  \
 	                                        \
 	X(boolean, quiet, 'q', "quiet",         \
-	  "report invalid UTF-8 via exit code")
+	  "report invalid UTF-8 via exit code") \
+	                                        \
+	X(boolean, graph, 'g', "graph",         \
+	  "dump UTF-8 state machine graph (DOT)")
 
 #define DETAILS \
  "The default behaviour without option arguments is to\n" \
@@ -47,6 +50,7 @@
 
 #include "dbg.h"
 #include "utf8.h"
+#include "utf8_graph.h"
 
 static const_inline size_t
 saturated_add_uz (size_t a,
@@ -75,6 +79,9 @@ static struct uz2 {
 static int
 arg_conflict (struct letopt *opt);
 
+static int
+dump_utf8_graph (struct letopt *opt);
+
 int
 main (int    c,
       char **v)
@@ -83,6 +90,9 @@ main (int    c,
 
 	if (arg_conflict(&opt))
 		return letopt_fini(&opt);
+
+	if (opt.m_graph)
+		return dump_utf8_graph(&opt);
 
 	if (letopt_nargs(&opt) < 1 || opt.m_help)
 		letopt_helpful_exit(&opt);
@@ -209,22 +219,45 @@ arg_conflict (struct letopt *opt)
 	bool count = opt->m_bytes || opt->m_chars;
 	int e = 0;
 
-	if (opt->m_quiet) {
-		if (count) {
-			pr_err_("can't count quietly");
-			e = EINVAL;
+	if (opt->m_graph && (letopt_nargs(opt) > 0 || count
+	                     || opt->m_help || opt->m_print
+	                     || opt->m_join || opt->m_quiet
+	                     || opt->m_skip)) {
+		pr_err_("graph dump option is exclusive");
+		e = EINVAL;
+
+	} else {
+		if (opt->m_quiet) {
+			if (count) {
+				pr_err_("can't count quietly");
+				e = EINVAL;
+			}
+
+			if (opt->m_print) {
+				pr_err_("can't print quietly");
+				e = EINVAL;
+			}
 		}
 
-		if (opt->m_print) {
-			pr_err_("can't print quietly");
-			e = EINVAL;
-		}
+		if (opt->m_skip &&
+		    (opt->m_quiet || (!opt->m_print && count)))
+			pr_wrn_("skip option ignored");
 	}
-
-	if (opt->m_skip &&
-	    (opt->m_quiet || (!opt->m_print && count)))
-		pr_wrn_("skip option ignored");
 
 	opt->p.e = e;
 	return e;
+}
+
+static int
+dump_utf8_graph (struct letopt *opt)
+{
+	static char buf[1024] = {0};
+	char const *end = utf8_graph(buf, &buf[sizeof buf], &opt->p.e);
+
+	if (end)
+		(void)fputs(buf, stdout);
+	else if (opt->p.e)
+		pr_errno_(opt->p.e, "utf8_graph");
+
+	return letopt_fini(opt);
 }

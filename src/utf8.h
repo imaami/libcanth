@@ -85,6 +85,60 @@ fixed_enum(utf8_st8, uint8_t) {
 #define utf8_bit(label) (uint16_t)(1U << utf8_##label)
 
 /**
+ * @brief Define a lookup table describing allowed state
+ *        transitions from each state, using state enums
+ *        for keys and sets of state flags for values.
+ *
+ * @note The baked-in type declaration is `uint16_t[16]`
+ *       with no type qualifiers; prepend more as needed
+ *       (e.g. `const`, `static`, etc.).
+ *
+ * @note This macro is not defined (i.e. gets undefined)
+ *       when `utf8.h` is included as a public interface.
+ *
+ * @param sym Symbol name for the lookup table.
+ */
+#define UTF8_PARSER_STATE_MAP(sym) uint16_t sym[16] = { \
+        [utf8_asc   ] = utf8_bit(asc)                   \
+                      | utf8_bit(lb2)                   \
+                      | utf8_bit(lb3_e0)                \
+                      | utf8_bit(lb3)                   \
+                      | utf8_bit(lb3_ed)                \
+                      | utf8_bit(lb4_f0)                \
+                      | utf8_bit(lb4)                   \
+                      | utf8_bit(lb4_f4),               \
+        [utf8_lb2   ] = utf8_bit(cb1),                  \
+        [utf8_lb3_e0] = utf8_bit(cb2_e0),               \
+        [utf8_lb3   ] = utf8_bit(cb2),                  \
+        [utf8_lb3_ed] = utf8_bit(cb2_ed),               \
+        [utf8_lb4_f0] = utf8_bit(cb3_f0),               \
+        [utf8_lb4   ] = utf8_bit(cb3),                  \
+        [utf8_lb4_f4] = utf8_bit(cb3_f4),               \
+        [utf8_cb3_f4] = utf8_bit(cb2),                  \
+        [utf8_cb3   ] = utf8_bit(cb2),                  \
+        [utf8_cb3_f0] = utf8_bit(cb2),                  \
+        [utf8_cb2_ed] = utf8_bit(cb1),                  \
+        [utf8_cb2   ] = utf8_bit(cb1),                  \
+        [utf8_cb2_e0] = utf8_bit(cb1),                  \
+        [utf8_cb1   ] = utf8_bit(asc)                   \
+                      | utf8_bit(lb2)                   \
+                      | utf8_bit(lb3_e0)                \
+                      | utf8_bit(lb3)                   \
+                      | utf8_bit(lb3_ed)                \
+                      | utf8_bit(lb4_f0)                \
+                      | utf8_bit(lb4)                   \
+                      | utf8_bit(lb4_f4),               \
+        [utf8_ini   ] = utf8_bit(asc)                   \
+                      | utf8_bit(lb2)                   \
+                      | utf8_bit(lb3_e0)                \
+                      | utf8_bit(lb3)                   \
+                      | utf8_bit(lb3_ed)                \
+                      | utf8_bit(lb4_f0)                \
+                      | utf8_bit(lb4)                   \
+                      | utf8_bit(lb4_f4)                \
+}
+
+/**
  * @brief UTF-8 parser object.
  */
 struct utf8 {
@@ -226,5 +280,10 @@ utf8_expects_leading_byte (struct utf8 const *const u8p)
 {
 	return u8p->state & (utf8_bit(asc) | utf8_bit(cb1) | utf8_bit(ini));
 }
+
+/* Private macro cleanup logic depends on this include being here,
+ * right above the closing endif of the header guard. DO NOT MOVE.
+ */
+#include "utf8_priv.h"
 
 #endif /* LIBCANTH_SRC_UTF8_H_ */
