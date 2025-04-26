@@ -77,8 +77,7 @@ utf8_graph (char              *dst,
 			continue;
 
 		size_t sz = (size_t)(end - dst);
-		int n = __builtin_snprintf(dst, sz,
-		                           "\tx%02zx [label=\"[", i);
+		int n = snprintf(dst, sz, "\tx%02zx [label=\"[", i);
 		if (n < 0) {
 			*err = EIO;
 			return nullptr;
@@ -92,11 +91,9 @@ utf8_graph (char              *dst,
 		if (b) {
 			size_t sz = (size_t)(end - dst);
 			int n = b == 1
-			    ? __builtin_snprintf(dst, sz,
-			                         "\\\\x%02x", a)
-			    : __builtin_snprintf(dst, sz,
-			                         "\\\\x%02x-\\\\x%02x",
-			                         a, a + b - 1);
+			    ? snprintf(dst, sz, "\\\\x%02x", a)
+			    : snprintf(dst, sz, "\\\\x%02x-\\\\x%02x",
+			               a, a + b - 1);
 			if (n < 0) {
 				*err = EIO;
 				return nullptr;
@@ -111,11 +108,9 @@ utf8_graph (char              *dst,
 		if (d) {
 			size_t sz = (size_t)(end - dst);
 			int n = d == 1
-			    ? __builtin_snprintf(dst, sz,
-			                         "\\\\x%02x", a + b + c)
-			    : __builtin_snprintf(dst, sz,
-			                         "\\\\x%02x-\\\\x%02x",
-			                         a + b + c, a + b + c + d - 1);
+			    ? snprintf(dst, sz, "\\\\x%02x", a + b + c)
+			    : snprintf(dst, sz, "\\\\x%02x-\\\\x%02x",
+			               a + b + c, a + b + c + d - 1);
 			if (n < 0) {
 				*err = EIO;
 				return nullptr;
@@ -143,9 +138,8 @@ utf8_graph (char              *dst,
 				continue;
 
 			size_t sz = (size_t)(end - dst);
-			int n = __builtin_snprintf(dst, sz,
-			                           "\tx%02zx -> x%02x;\n",
-			                           src_idx, dst_idx);
+			int n = snprintf(dst, sz, "\tx%02zx -> x%02x;\n",
+			                 src_idx, dst_idx);
 			if (n < 0) {
 				*err = EIO;
 				return nullptr;
