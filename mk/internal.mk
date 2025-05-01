@@ -185,6 +185,8 @@ $(eval override .O=$$(eval override .O:=$$$$(shell bash -c 'a="$$$$O";  \
       $$(call about,$t,$$?)                                             \
       $$(call msg,CC,$$(@:$$O%=$$(.O)%))                                \
       +$$Q$$(CC) $$(C_BUILDFLAGS) $$(strip                              \
+        $$(CPPFLAGS_$$(<:$$(THIS_DIR)%=%)) $$(CPPFLAGS_$t)              \
+        $$(CPPFLAGS_$t_$$(<:$$(THIS_DIR)%=%))                           \
         $$(CFLAGS_$$(<:$$(THIS_DIR)%=%)) $$(CFLAGS_$t)                  \
         $$(CFLAGS_$t_$$(<:$$(THIS_DIR)%=%)) -c -o $$@ -MMD $$<)))       \
   $(if $(filter-out $(OBJ),$(CXX_OBJ_$t)),                              \
@@ -192,6 +194,8 @@ $(eval override .O=$$(eval override .O:=$$$$(shell bash -c 'a="$$$$O";  \
       $$(call about,$t,$$?)                                             \
       $$(call msg,CXX,$$(@:$$O%=$$(.O)%))                               \
       +$$Q$$(CXX) $$(CXX_BUILDFLAGS) $$(strip                           \
+        $$(CPPFLAGS_$$(<:$$(THIS_DIR)%=%)) $$(CPPFLAGS_$t)              \
+        $$(CPPFLAGS_$t_$$(<:$$(THIS_DIR)%=%))                           \
         $$(CXXFLAGS_$$(<:$$(THIS_DIR)%=%)) $$(CXXFLAGS_$t)              \
         $$(CXXFLAGS_$t_$$(<:$$(THIS_DIR)%=%)) -c -o $$@ -MMD $$<)))     \
   $(eval clean-$t: $$(eval override WHAT_$t := $$$$(sort $$$$(wildcard  \
