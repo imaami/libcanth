@@ -225,6 +225,41 @@ utf8_parse_next_code_point (struct utf8   *u8p,
                             uint8_t const *ptr) nonnull_in();
 
 /**
+ * @brief Parse the next UTF-8 code point from a byte buffer
+ *        bounded by an end pointer.
+ *
+ * Consumes up to 4 bytes of UTF-8 encoded input until a code
+ * point is assembled, the buffer end is reached, or an error
+ * occurs. Returns the address of the next byte following the
+ * consumed bytes.
+ *
+ * This is otherwise like @ref utf8_parse_next_code_point()
+ * except that the user doesn't need to ensure there are at
+ * least 4 bytes available in the input buffer. Instead, if
+ * the buffer end is reached prematurely, the `end` pointer
+ * is returned and `u8p->error` is assigned `ENODATA`.
+ *
+ * @param u8p A pointer to the UTF-8 parser object. Must not
+ *            be null.
+ * @param ptr A pointer to the input buffer. Must not be null.
+ * @param end A pointer to the byte one past the end of the
+ *            input buffer. Must not be null.
+ * @return A pointer to the byte immediately after the parsed
+ *         code point, the `end` pointer if the buffer end is
+ *         reached, or a pointer to the first invalid byte if
+ *         malformed input is encountered. Note that the `end`
+ *         pointer is returned both when successfully parsing
+ *         the last code point, and when reaching the buffer
+ *         end prematurely; check `u8p->error` to distinguish
+ *         between these cases.
+ */
+nonnull_out
+extern uint8_t const *
+utf8_parse_next_code_point2 (struct utf8   *u8p,
+                             uint8_t const *ptr,
+                             uint8_t const *end) nonnull_in();
+
+/**
  * @brief Get the result of the last UTF-8 code point parsing operation.
  *
  * The result is a pointer to the UTF-8 encoded code point. The result

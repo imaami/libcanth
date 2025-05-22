@@ -310,3 +310,33 @@ utf8_parse_next_code_point (struct utf8 *const  u8p,
 
 	return ptr;
 }
+
+nonnull_in() nonnull_out
+uint8_t const *
+utf8_parse_next_code_point2 (struct utf8 *const    u8p,
+                             uint8_t const        *ptr,
+                             uint8_t const *const  end)
+{
+	enum utf8_st8 st8 = utf8_ini;
+
+	if (utf8_get_state(u8p, &st8)) {
+		for (;;) {
+			if (ptr >= end) {
+				u8p->error = ENODATA;
+				break;
+			}
+
+			if (!utf8_set_state(u8p, &st8, *ptr))
+				break;
+
+			++ptr;
+
+			if (utf8_done(u8p)) {
+				u8p->error = 0;
+				break;
+			}
+		}
+	}
+
+	return ptr;
+}

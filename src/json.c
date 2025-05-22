@@ -150,6 +150,7 @@ json_parse_string (struct json_arg arg)
 	uint8_t const *p = &arg.ptr[1];
 	while (p < arg.end) {
 		if (*p < 0x20U) {
+			// unescaped control character
 			ret.code = EILSEQ;
 			break;
 		}
@@ -162,46 +163,41 @@ json_parse_string (struct json_arg arg)
 
 		if (*p == (uint8_t)'\\') {
 			if (++p >= arg.end)
+				// buffer ends in backslash
 				break;
 
 			uint8_t flags = json_lut[*p];
 
 			if (!(flags & json_esc)) {
+				// lone unescaped backslash
 				ret.code = EILSEQ;
 				break;
 			}
 
 			if (*p++ != (uint8_t)'u')
+				// single-character escape sequence
 				continue;
 
-			if (p >= arg.end)
-				break;
-			if (!(json_lut[*p] & json_hex)) {
-				ret.code = EILSEQ;
-				break;
-			}
-			if (++p >= arg.end)
-				break;
-			if (!(json_lut[*p] & json_hex)) {
-				ret.code = EILSEQ;
-				break;
-			}
-			if (++p >= arg.end)
-				break;
-			if (!(json_lut[*p] & json_hex)) {
-				ret.code = EILSEQ;
-				break;
-			}
-			if (++p >= arg.end)
-				break;
-			if (!(json_lut[*p] & json_hex)) {
-				ret.code = EILSEQ;
-				break;
+			// unicode escape sequence
+			for (size_t i = 0;; ++p) {
+				if (p >= arg.end)
+					// unexpected end of input
+					goto done;
+
+				if (!(json_lut[*p] & (json_dig|json_hex))) {
+					// non-hex character
+					ret.code = EILSEQ;
+					goto done;
+				}
+				if (++i == 4)
+					break;
 			}
 		}
+
 		++p;
 	}
 
+done:
 	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
 	return ret;
 }
