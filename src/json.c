@@ -130,14 +130,80 @@ json_parse_object (useless struct json_arg arg)
 	};
 }
 
+/**
+ * @brief Parse a JSON string.
+ *
+ * On entry, `arg.ptr` points to the opening '"' character.
+ *
+ * @param arg JSON argument.
+ * @return JSON return value.
+ */
 static struct json_ret
-json_parse_string (useless struct json_arg arg)
+json_parse_string (struct json_arg arg)
 {
-	return (struct json_ret){
+	struct json_ret ret = {
 		.size = 0,
 		.type = json_string,
-		.code = ENOSYS
+		.code = ENODATA
 	};
+
+	uint8_t const *p = &arg.ptr[1];
+	while (p < arg.end) {
+		if (*p < 0x20U) {
+			ret.code = EILSEQ;
+			break;
+		}
+
+		if (*p == (uint8_t)'"') {
+			++p;
+			ret.code = 0;
+			break;
+		}
+
+		if (*p == (uint8_t)'\\') {
+			if (++p >= arg.end)
+				break;
+
+			uint8_t flags = json_lut[*p];
+
+			if (!(flags & json_esc)) {
+				ret.code = EILSEQ;
+				break;
+			}
+
+			if (*p++ != (uint8_t)'u')
+				continue;
+
+			if (p >= arg.end)
+				break;
+			if (!(json_lut[*p] & json_hex)) {
+				ret.code = EILSEQ;
+				break;
+			}
+			if (++p >= arg.end)
+				break;
+			if (!(json_lut[*p] & json_hex)) {
+				ret.code = EILSEQ;
+				break;
+			}
+			if (++p >= arg.end)
+				break;
+			if (!(json_lut[*p] & json_hex)) {
+				ret.code = EILSEQ;
+				break;
+			}
+			if (++p >= arg.end)
+				break;
+			if (!(json_lut[*p] & json_hex)) {
+				ret.code = EILSEQ;
+				break;
+			}
+		}
+		++p;
+	}
+
+	ret.size = (uint64_t)(ptrdiff_t)(p - arg.ptr);
+	return ret;
 }
 
 /**
