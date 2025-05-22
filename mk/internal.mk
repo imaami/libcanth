@@ -160,19 +160,25 @@ override about = $(if $(strip $2),$(call .about,$(if            \
 
 # Generate rules and dependencies.
 override define target_rules
-$(eval override .O=$$(eval override .O:=$$$$(shell bash -c 'a="$$$$O";  \
+$(eval                                                                  \
+  override .O=$$(eval override .O:=$$$$(shell bash -c 'a="$$$$O";       \
   b=$$$$$$$$(realpath --relative-to="$$$$(THIS_DIR)" "$$$$$$$$a");      \
   (( $$$$$$$${#a} > $$$$$$$${#b} )) || b="$$$$$$$${a%/}"; printf "%s/"  \
-  "$$$$$$$$b"'))$$(if $$(.O:./=),,$$(eval override .O:=))$$(.O)$n       \
-  override undefine OBJ                                                 \
-)$(foreach t,$1,$(eval $t:| $$O$t)                                      \
-  $(eval override DBG_OBJ_$t := $$(DBG_$t:%=$$O%.o))                    \
-  $(eval override DBG_DEP_$t := $$(DBG_OBJ_$t:%.o=%.d))                 \
-  $(eval override OBJ_$t     := $$(SRC_$t:%=$$O%.o)                     \
-                                $$(if $$(debug),$$(DBG_OBJ_$t)))        \
-  $(eval override DEP_$t     := $$(OBJ_$t:%.o=%.d))                     \
-  $(eval override CC_OBJ_$t  := $$(OBJ_$t:%.cpp.o=))                    \
-  $(eval override CXX_OBJ_$t := $$(OBJ_$t:%.c.o=))                      \
+  "$$$$$$$$b"'))$$(if $$(.O:./=),,$$(eval override .O:=))$$(.O))        \
+$(eval                                                                  \
+  override EXE_TGT         := $(1:lib%=)$n                              \
+  $$(eval override EXE_SRC := $$$$(sort $$(EXE_TGT:%=$$$$(SRC_%))))$n   \
+  override undefine EXE_OBJ)                                            \
+$(foreach t,$(EXE_TGT),                                                 \
+  $(eval                                                                \
+    override DBG_OBJ_$t := $$(DBG_$t:%=$$O%.o)$n                        \
+    override DBG_DEP_$t := $$(DBG_OBJ_$t:%.o=%.d)$n                     \
+    override OBJ_$t     := $$(SRC_$t:%=$$O%.o)                          \
+                           $$(if $$(debug),$$(DBG_OBJ_$t))$n            \
+    override DEP_$t     := $$(OBJ_$t:%.o=%.d)$n                         \
+    override CC_OBJ_$t  := $$(OBJ_$t:%.cpp.o=)$n                        \
+    override CXX_OBJ_$t := $$(OBJ_$t:%.c.o=))                           \
+  $(eval $t:| $$O$t)                                                    \
   $(eval $$O$t: $$(OBJ_$t);                                             \
     $$(call about,$t,$$?)                                               \
     $$(call msg,LINK,$$(.O)$t)                                          \
@@ -180,8 +186,8 @@ $(eval override .O=$$(eval override .O:=$$$$(shell bash -c 'a="$$$$O";  \
       $$(CFLAGS_$t) -o $$@ $$^ $$(LIBS_$t)))                            \
   $(eval $$(foreach s,$$(SRC_$t)$$(if $$(debug), $$(DBG_$t)),           \
     $$(eval $$O$$s.o: $$(THIS_DIR)$$s)))                                \
-  $(if $(filter-out $(OBJ),$(CC_OBJ_$t)),                               \
-    $(eval $$(filter-out $$(OBJ),$$(CC_OBJ_$t)):;                       \
+  $(if $(filter-out $(EXE_OBJ),$(CC_OBJ_$t)),                           \
+    $(eval $$(filter-out $$(EXE_OBJ),$$(CC_OBJ_$t)):;                   \
       $$(call about,$t,$$?)                                             \
       $$(call msg,CC,$$(@:$$O%=$$(.O)%))                                \
       +$$Q$$(CC) $$(C_BUILDFLAGS) $$(strip                              \
@@ -189,8 +195,8 @@ $(eval override .O=$$(eval override .O:=$$$$(shell bash -c 'a="$$$$O";  \
         $$(CPPFLAGS_$t_$$(<:$$(THIS_DIR)%=%))                           \
         $$(CFLAGS_$$(<:$$(THIS_DIR)%=%)) $$(CFLAGS_$t)                  \
         $$(CFLAGS_$t_$$(<:$$(THIS_DIR)%=%)) -c -o $$@ -MMD $$<)))       \
-  $(if $(filter-out $(OBJ),$(CXX_OBJ_$t)),                              \
-    $(eval $$(filter-out $$(OBJ),$$(CXX_OBJ_$t)):;                      \
+  $(if $(filter-out $(EXE_OBJ),$(CXX_OBJ_$t)),                          \
+    $(eval $$(filter-out $$(EXE_OBJ),$$(CXX_OBJ_$t)):;                  \
       $$(call about,$t,$$?)                                             \
       $$(call msg,CXX,$$(@:$$O%=$$(.O)%))                               \
       +$$Q$$(CXX) $$(CXX_BUILDFLAGS) $$(strip                           \
@@ -205,11 +211,79 @@ $(eval override .O=$$(eval override .O:=$$$$(shell bash -c 'a="$$$$O";  \
   $(eval clean-$t: $$(if $$(WHAT_$t),| yeet);$$(if $$(WHAT_$t),         \
     $$(call msg,CLEAN,$$(.O)$t)$$Q$$(RM) $$(WHAT_$t),$(nop)))           \
   $(eval install-$t:; $$(call msg,INSTALL,$$(.O)$t)$(nop))              \
-  $(eval override OBJ := $$(sort $$(OBJ) $$(OBJ_$t)))                   \
-)$(eval                                                                 \
-  override DEP := $$(OBJ:.o=.d)$n                                       \
-  -include $$(DEP)                                                      \
-)
+  $(eval override EXE_OBJ := $$(sort $$(EXE_OBJ) $$(OBJ_$t))))          \
+$(eval                                                                  \
+  override LIB_CFLAGS      := -fPIC -fvisibility=hidden$n               \
+  override LIB_CXXFLAGS    := -fPIC -fvisibility=hidden$n               \
+  override LDFLAGS         := -shared$n                                 \
+  override LIB_TGT         := $$(patsubst %.so,%,$$(filter lib%,$1))$n  \
+  $$(eval override LIB_SRC := $$$$(sort $$(LIB_TGT:%=$$$$(SRC_%))))$n   \
+  override undefine LIB_OBJ)                                            \
+$(foreach t,$(LIB_TGT),                                                 \
+  $(eval                                                                \
+    override DBG_OBJ_$t := $$(DBG_$t:%=$$O%.o-fPIC)$n                   \
+    override DBG_DEP_$t := $$(DBG_OBJ_$t:%.o-fPIC=%.d-fPIC)$n           \
+    override OBJ_$t     := $$(SRC_$t:%=$$O%.o-fPIC)                     \
+                           $$(if $$(debug),$$(DBG_OBJ_$t))$n            \
+    override DEP_$t     := $$(OBJ_$t:%.o-fPIC=%.d-fPIC)$n               \
+    override CC_OBJ_$t  := $$(OBJ_$t:%.cpp.o-fPIC=)$n                   \
+    override CXX_OBJ_$t := $$(OBJ_$t:%.c.o-fPIC=)$n                     \
+    override MAJOR_$t   := $$(or $$(MAJOR_$t),0)$n                      \
+    override MINOR_$t   := $$(or $$(MINOR_$t),0)$n                      \
+    override PATCH_$t   := $$(or $$(PATCH_$t),0)$n                      \
+    override SONAME_$t  := $t.so.$$(MAJOR_$t)$n                         \
+    override VERSION_$t := $$(MAJOR_$t).$$(MINOR_$t).$$(PATCH_$t)$n     \
+    override SYMLNKS_$t := $t.so $$(SONAME_$t)                          \
+                           $t.so.$$(MAJOR_$t).$$(MINOR_$t)$n            \
+    override SYMLNKS    += $$(SYMLNKS_$t))                              \
+  $(eval $t:| $$(SYMLNKS_$t:%=$$O%) $$O$t.so.$$(VERSION_$t))            \
+  $(eval $$(SYMLNKS_$t:%=$$O%): $$O$t.so.$$(VERSION_$t);                \
+    $$(call msg,SYMLINK,$$(@:$$O%=$$(.O)%) -> $t.so.$$(VERSION_$t))     \
+    $$Q$$(or $$(LN),ln) -fns $t.so.$$(VERSION_$t) $$@)                  \
+  $(eval $$O$t.so.$$(VERSION_$t):                                       \
+    override LDFLAGS_$t += -Wl,-soname=$$(SONAME_$t))                   \
+  $(eval $$O$t.so.$$(VERSION_$t): $$(OBJ_$t);                           \
+    $$(call about,$t,$$?)                                               \
+    $$(call msg,LINK,$$(.O)$t)                                          \
+    +$$Q$$(CC) $$(C_BUILDFLAGS) $$(strip                                \
+      $$(LIB_CFLAGS) $$(CFLAGS_$t) $$(LDFLAGS) $$(LDFLAGS_$t)           \
+      -o $$@ $$^ $$(LIBS_$t)))                                          \
+  $(eval $$(foreach s,$$(SRC_$t)$$(if $$(debug), $$(DBG_$t)),           \
+    $$(eval $$O$$s.o-fPIC: $$(THIS_DIR)$$s)))                           \
+  $(if $(filter-out $(LIB_OBJ),$(CC_OBJ_$t)),                           \
+    $(eval $$(filter-out $$(LIB_OBJ),$$(CC_OBJ_$t)):;                   \
+      $$(call about,$t,$$?)                                             \
+      $$(call msg,CC,$$(@:$$O%=$$(.O)%))                                \
+      +$$Q$$(CC) $$(C_BUILDFLAGS) $$(strip                              \
+        $$(CPPFLAGS_$$(<:$$(THIS_DIR)%=%)) $$(CPPFLAGS_$t)              \
+        $$(CPPFLAGS_$t_$$(<:$$(THIS_DIR)%=%))                           \
+        $$(LIB_CFLAGS) $$(CFLAGS_$$(<:$$(THIS_DIR)%=%))                 \
+        $$(CFLAGS_$t) $$(CFLAGS_$t_$$(<:$$(THIS_DIR)%=%))               \
+        -c -o $$@ -MMD -MF $$<.d-fPIC $$<)))                            \
+  $(if $(filter-out $(LIB_OBJ),$(CXX_OBJ_$t)),                          \
+    $(eval $$(filter-out $$(LIB_OBJ),$$(CXX_OBJ_$t)):;                  \
+      $$(call about,$t,$$?)                                             \
+      $$(call msg,CXX,$$(@:$$O%=$$(.O)%))                               \
+      +$$Q$$(CXX) $$(CXX_BUILDFLAGS) $$(strip                           \
+        $$(CPPFLAGS_$$(<:$$(THIS_DIR)%=%)) $$(CPPFLAGS_$t)              \
+        $$(CPPFLAGS_$t_$$(<:$$(THIS_DIR)%=%))                           \
+        $$(LIB_CXXFLAGS) $$(CXXFLAGS_$$(<:$$(THIS_DIR)%=%))             \
+        $$(CXXFLAGS_$t) $$(CXXFLAGS_$t_$$(<:$$(THIS_DIR)%=%))           \
+        -c -o $$@ -MMD -MF $$<.d-fPIC $$<)))                            \
+  $(eval clean-$t: $$(eval override WHAT_$t := $$$$(sort $$$$(wildcard  \
+    $$O$t.so.$$(VERSION_$t) $$(SYMLNKS_$t:%=$$O%) $$(OBJ_$t) $$(DEP_$t) \
+    $$(DBG_OBJ_$t) $$(DBG_DEP_$t)                                       \
+    $$(addprefix $$O*.,args.0 bc i ii lto_wrapper_args ltrans_args      \
+      ltrans0.o ltrans.o ltrans.out res s temp.o)))))                   \
+  $(eval clean-$t: $$(if $$(WHAT_$t),| yeet);$$(if $$(WHAT_$t),         \
+    $$(call msg,CLEAN,$$(.O)$t)$$Q$$(RM) $$(WHAT_$t),$(nop)))           \
+  $(eval install-$t:; $$(call msg,INSTALL,$$(.O)$t)$(nop))              \
+  $(eval override LIB_OBJ := $$(sort $$(LIB_OBJ) $$(OBJ_$t))))          \
+$(eval                                                                  \
+  override EXE_DEP := $$(EXE_OBJ:.o=.d)$n                               \
+  override LIB_DEP := $$(LIB_OBJ:.o-fPIC=.d-fPIC)$n                     \
+  override DEP     := $$(EXE_DEP) $$(LIB_DEP)$n                         \
+  -include $$(DEP))
 endef
 
 endif

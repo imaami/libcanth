@@ -1,6 +1,6 @@
 override THIS_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
-override TARGETS := test test-utf8
+override TARGETS := libcanth-mcp-server test test-utf8
 
     all:| $(TARGETS)
   clean:| $(TARGETS:%=clean-%)
@@ -25,6 +25,9 @@ override CFLAGS_test.c = $(CJSON_CFLAGS)
 
 override SRC_test-utf8 := letopt.c test-utf8.c utf8.c utf8_graph.c
 override DBG_test-utf8 := dbg.c
+
+override SRC_libcanth-mcp-server := mcp_server.c
+override DBG_libcanth-mcp-server := dbg.c
 
 $(call pkg_libs,libcjson,CJSON_LIBS,-lcjson)
 $(call pkg_cflags,libcjson,CJSON_CFLAGS)

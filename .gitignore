@@ -1,11 +1,13 @@
 *.bc
 *.d
+*.d-fPIC
 *.i
 *.ii
 *.lto_wrapper_args
 *.ltrans.out
 *.ltrans_args
 *.o
+*.o-fPIC
 *.res
 *.s
 *.wpa.args.0
@@ -13,5 +15,6 @@
 /.qtc_clangd
 /.vscode
 /build
+/src/libcanth-mcp-server.so*
 /src/test
 /src/test-utf8
