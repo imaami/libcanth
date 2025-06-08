@@ -25,14 +25,14 @@ main (int    argc,
 	pr_out("%s / %s", canth_c_version(), canth_cxx_version());
 
 	for (int i = 0; ++i < argc;) {
-		struct file_in f = file_read(argv[i]);
-		int e = file_error(&f);
+		struct file_in f = file_in(argv[i], nullptr, 0, FILE_IN_TEXT);
+		int e = file_in_error(&f);
 		if (e) {
 			pr_errno(e, "file_read");
 			ret = EXIT_FAILURE;
 			continue;
 		}
-		char const *txt = file_text(&f);
+		char const *txt = file_in_text(&f);
 		cJSON *json = cJSON_Parse(txt);
 		if (!json) {
 			pr_err_("parsing failed");

@@ -12,27 +12,34 @@
 
 struct file_in {
 	unsigned char *data;
-	union {
-		size_t size;
-		int ec[!(sizeof (size_t) / sizeof (int))
-		       + sizeof (size_t) / sizeof (int)];
-	};
+	size_t         size;
+	unsigned       flags;
+	int            error;
+};
+
+enum file_in_flags {
+	FILE_IN_TEXT  = 1U << 0U,
+	FILE_IN_EXACT = 1U << 1U,
+	FILE_IN_ALLOC = 1U << 2U,
 };
 
 extern struct file_in
-file_read (char const *path);
+file_in (char const *path,
+         void       *dest,
+         size_t      size,
+         unsigned    flags);
 
 extern void
 file_in_fini (struct file_in *f);
 
 static force_inline int
-file_error (struct file_in const *f)
+file_in_error (struct file_in const *f)
 {
-	return f && !f->data ? f->ec[0] : 0;
+	return f && !f->data ? f->error : 0;
 }
 
 static force_inline char const *
-file_text (struct file_in const *f)
+file_in_text (struct file_in const *f)
 {
 	return f && f->data ? (char const *)f->data : "";
 }
