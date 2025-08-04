@@ -20,28 +20,28 @@ typedef unsigned _BitInt(2) uint2;
 typedef unsigned _BitInt(4) uint4;
 #define uint2(x) (uint2)(x)
 #define uint4(x) (uint4)(x)
-#define uint2_get(x) x
-#define uint4_get(x) x
+#define uint2_get(x) (x)
+#define uint4_get(x) (x)
 #endif
 
 static const_inline uint2
 rev2 (uint2 x)
 {
-	x ^= (x & 0x2) >> 1U;
-	x ^= (x & 0x1) << 1U;
-	x ^= (x & 0x2) >> 1U;
+	uint2_get(x) ^= (uint2_get(x) & 0x2U) >> 1U;
+	uint2_get(x) ^= (uint2_get(x) & 0x1U) << 1U;
+	uint2_get(x) ^= (uint2_get(x) & 0x2U) >> 1U;
 	return x;
 }
 
 static const_inline uint4
 rev4 (uint4 x)
 {
-	x ^= (x & 0xa) >> 1U;
-	x ^= (x & 0x5) << 1U;
-	x ^= (x & 0xc) >> 2U;
-	x ^= (x & 0x3) << 2U;
-	x ^= (x & 0xc) >> 2U;
-	x ^= (x & 0xa) >> 1U;
+	uint4_get(x) ^= (uint4_get(x) & 0xaU) >> 1U;
+	uint4_get(x) ^= (uint4_get(x) & 0x5U) << 1U;
+	uint4_get(x) ^= (uint4_get(x) & 0xcU) >> 2U;
+	uint4_get(x) ^= (uint4_get(x) & 0x3U) << 2U;
+	uint4_get(x) ^= (uint4_get(x) & 0xcU) >> 2U;
+	uint4_get(x) ^= (uint4_get(x) & 0xaU) >> 1U;
 	return x;
 }
 
