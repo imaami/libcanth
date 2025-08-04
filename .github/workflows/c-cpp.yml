@@ -76,7 +76,7 @@ jobs:
           _cxx="${_cc/#gcc/g++}"
           _dir="build/dbg_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 
@@ -90,7 +90,7 @@ jobs:
           _cxx="${_cc/#clang/clang++}"
           _dir="build/dbg_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
           ret=$?
           if (( ret == 139 )); then
             fmt='\n\e[1m\e[33mIgnoring SIGSEGV during %s build.\e[m\n\n'
@@ -115,7 +115,7 @@ jobs:
           _cxx="${_cc/#gcc/g++}"
           _dir="build/rel_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 
@@ -129,7 +129,7 @@ jobs:
           _cxx="${_cc/#clang/clang++}"
           _dir="build/rel_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
           ret=$?
           if (( ret == 139 )); then
             fmt='\n\e[1m\e[33mIgnoring SIGSEGV during %s build.\e[m\n\n'
@@ -253,7 +253,7 @@ jobs:
           _cxx="${_cc/#gcc/g++}"
           _dir="build/dbg_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 
@@ -267,7 +267,7 @@ jobs:
           _cxx="${_cc/#clang/clang++}"
           _dir="build/dbg_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
           ret=$?
           if (( ret == 139 )); then
             fmt='\n\e[1m\e[33mIgnoring SIGSEGV during %s build.\e[m\n\n'
@@ -292,7 +292,7 @@ jobs:
           _cxx="${_cc/#gcc/g++}"
           _dir="build/rel_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 
@@ -306,7 +306,7 @@ jobs:
           _cxx="${_cc/#clang/clang++}"
           _dir="build/rel_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
           ret=$?
           if (( ret == 139 )); then
             fmt='\n\e[1m\e[33mIgnoring SIGSEGV during %s build.\e[m\n\n'
@@ -430,7 +430,7 @@ jobs:
           _cxx="${_cc/#gcc/g++}"
           _dir="build/dbg_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 
@@ -444,7 +444,7 @@ jobs:
           _cxx="${_cc/#clang/clang++}"
           _dir="build/dbg_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" debug=1 CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 
@@ -458,7 +458,7 @@ jobs:
           _cxx="${_cc/#gcc/g++}"
           _dir="build/rel_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 
@@ -472,7 +472,7 @@ jobs:
           _cxx="${_cc/#clang/clang++}"
           _dir="build/rel_$_cc"
           mkdir -p "$_dir"
-          make -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
+          make V=1 -j$ncpu -C src O="../$_dir" CC="$_cc" CXX="$_cxx"
           (( $? == 0 )) || touch "$_dir/failed"
         done
 

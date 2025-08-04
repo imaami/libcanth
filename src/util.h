@@ -23,32 +23,43 @@ diag_clang(pop)
 
 #define naught(...)
 
+#ifndef _MSC_VER
+
 /** @brief Instruct the compiler to always inline a function.
  */
-#define force_inline __attribute__((always_inline)) inline
+# define force_inline __attribute__((always_inline)) inline
 
 /** @brief Instruct the compiler to always inline a function
  *         and to assume its return value is determined only
  *         by its arguments.
  */
-#define const_inline __attribute__((always_inline,const)) inline
+# define const_inline __attribute__((always_inline,const)) inline
 
 /** @brief Function returns a specific baked-in data pointer.
  */
-#define const_nonnull __attribute__((const,returns_nonnull))
+# define const_nonnull __attribute__((const,returns_nonnull))
 
 /** @brief Assume that the specified argument indices are not null.
  */
-#define nonnull_in(...) __attribute__(( \
-        nonnull maybe_parenthesize(__VA_ARGS__)))
+# define nonnull_in(...) __attribute__(( \
+         nonnull maybe_parenthesize(__VA_ARGS__)))
 
 /** @brief Assume that the return value of a function is not null.
  */
-#define nonnull_out __attribute__((returns_nonnull))
+# define nonnull_out __attribute__((returns_nonnull))
 
 /** @brief Suppress compiler warnings about an unused entity.
  */
-#define useless __attribute__((unused))
+# define useless __attribute__((unused))
+
+#else /* _MSC_VER */
+# define force_inline __forceinline
+# define const_inline __forceinline
+# define const_nonnull
+# define nonnull_in(...)
+# define nonnull_out
+# define useless
+#endif /* _MSC_VER */
 
 /** @brief Calculate the element count of an array.
  */
@@ -88,6 +99,12 @@ diag_clang(pop)
         default:(x), unsigned char:1, \
         unsigned short:1, unsigned:1, \
         typeof(1UL):1,typeof(1ULL):1) < (typeof(x))0)
+
+#define uint_type(x) typeof(_Generic(*(typeof(x) *)(void *)0,               \
+        signed char: (unsigned char)0, unsigned char: (unsigned char)0,     \
+        signed short: (unsigned short)0, unsigned short: (unsigned short)0, \
+        signed int: 0U, unsigned: 0U, signed long: 0UL, unsigned long: 0UL, \
+        signed long long: 0ULL, unsigned long long: 0ULL))
 
 /** @brief Check if a value is a char array.
  */
